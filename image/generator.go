@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/disintegration/imaging"
+	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 
 	"github.com/tdewolff/canvas"
@@ -18,7 +19,7 @@ import (
 )
 
 // GenerateImage creates a stylized image of Quran verses natively
-func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verses []quran.Verse, style Style, fontPath string) ([]byte, error) {
+func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verses []quran.Verse, style config.Style, fontPath string) ([]byte, error) {
 	openingText := fmt.Sprintf("surah%03d", surahNum)
 
 	var versesText string

@@ -27,3 +27,15 @@ func Load(path string) error {
 	}
 	return json.Unmarshal(data, &AppConfig)
 }
+
+func GetStyleByID(id string) Style {
+	for _, s := range AppConfig.Styles {
+		if s.ID == id {
+			return s
+		}
+	}
+	if len(AppConfig.Styles) > 0 {
+		return AppConfig.Styles[0]
+	}
+	return Style{}
+}

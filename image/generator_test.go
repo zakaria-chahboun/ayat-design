@@ -5,14 +5,17 @@ import (
 	"testing"
 
 	"github.com/tdewolff/canvas"
+	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 )
 
 func TestGenerateImage(t *testing.T) {
-	// Need to be inside the project root for paths to work, or adjust paths.
-	// `go test` runs from the package directory (`image/`), so we need to step back.
+	err := config.Load("../config.json")
+	if err != nil {
+		t.Fatalf("Load config failed: %v", err)
+	}
 
-	err := quran.LoadQuran("../quran.json")
+	err = quran.LoadQuran("../quran.json")
 	if err != nil {
 		t.Fatalf("LoadQuran failed: %v", err)
 	}
@@ -22,7 +25,7 @@ func TestGenerateImage(t *testing.T) {
 		t.Fatalf("FetchAyat failed: %v", err)
 	}
 
-	testStyle := PredefinedStyles[0]
+	testStyle := config.AppConfig.Styles[0]
 	// Adjust path because tests run in the image/ directory
 	testStyle.BackgroundImage = "../" + testStyle.BackgroundImage
 	imgData, err := GenerateImage(2, surahName, 255, 255, verses, testStyle, "../fonts/Nabi.ttf")

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/image"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 	tele "gopkg.in/telebot.v3"
@@ -95,7 +96,7 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 
 		menu := &tele.ReplyMarkup{}
 		var rows []tele.Row
-		for _, style := range image.PredefinedStyles {
+		for _, style := range config.AppConfig.Styles {
 			btn := menu.Data(style.Name, "select_style", style.ID)
 			rows = append(rows, menu.Row(btn))
 		}
@@ -111,7 +112,7 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 		}
 
 		styleID := c.Callback().Data
-		selectedStyle := image.GetStyleByID(styleID)
+		selectedStyle := config.GetStyleByID(styleID)
 
 		// Clean up state
 		delete(pendingRequests, c.Chat().ID)
