@@ -5,29 +5,27 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/zakaria-chahboun/AyatDesingBot/bot"
+	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 	tele "gopkg.in/telebot.v3"
 )
 
 func main() {
-	// Load .env file if it exists
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found or error reading it, falling back to system environment variables")
+	if err := config.Load("config.json"); err != nil {
+		log.Fatalf("Failed to load config.json: %v", err)
 	}
 
 	if err := quran.LoadQuran("quran.json"); err != nil {
 		log.Fatalf("error loading quran: %v", err)
 	}
 
-	token := os.Getenv("BOT_TOKEN")
-	if token == "" {
-		log.Fatal("BOT_TOKEN environment variable is required")
+	if config.AppConfig.BotToken == "" {
+		log.Fatal("bot_token is required in config.json")
 	}
 
 	pref := tele.Settings{
-		Token:  token,
+		Token:  config.AppConfig.BotToken,
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
 	}
 
