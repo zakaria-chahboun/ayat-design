@@ -4,10 +4,8 @@ go 1.25.7
 
 require (
 	github.com/disintegration/imaging v1.6.2
-	github.com/joho/godotenv v1.5.1
 	github.com/tdewolff/canvas v0.0.0-20260306132702-8921d53f210f
 	gopkg.in/telebot.v3 v3.3.8
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
