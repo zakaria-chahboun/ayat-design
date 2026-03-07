@@ -5,8 +5,9 @@ go 1.25.7
 require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/joho/godotenv v1.5.1
-	github.com/tdewolff/canvas v0.0.0-20260303123144-6ffe49714bf1
+	github.com/tdewolff/canvas v0.0.0-20260306132702-8921d53f210f
 	gopkg.in/telebot.v3 v3.3.8
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -36,7 +37,6 @@ require (
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	gonum.org/v1/plot v0.16.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/knuth v0.5.5 // indirect
 	modernc.org/token v1.1.0 // indirect
 	star-tex.org/x/tex v0.7.1 // indirect
