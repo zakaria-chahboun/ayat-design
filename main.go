@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -12,16 +12,24 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
+
 	if err := config.Load("config.json"); err != nil {
-		log.Fatalf("Failed to load config.json: %v", err)
+		logger.Error("Failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	if err := quran.LoadQuran("quran.json"); err != nil {
-		log.Fatalf("error loading quran: %v", err)
+		logger.Error("Failed to load quran", "error", err)
+		os.Exit(1)
 	}
 
 	if config.AppConfig.BotToken == "" {
-		log.Fatal("bot_token is required in config.json")
+		logger.Error("bot_token is required in config.json")
+		os.Exit(1)
 	}
 
 	pref := tele.Settings{
@@ -31,14 +39,13 @@ func main() {
 
 	b, err := tele.NewBot(pref)
 	if err != nil {
-		log.Fatal(err)
-		return
+		logger.Error("Failed to create bot", "error", err)
+		os.Exit(1)
 	}
 
-	// Make sure backgrounds directory exists
 	os.MkdirAll("backgrounds", 0755)
 
-	log.Println("Bot is starting...")
+	logger.Info("Bot is starting...")
 	bot.RegisterHandlers(b, "backgrounds", "fonts/Nabi.ttf")
 
 	b.Start()
