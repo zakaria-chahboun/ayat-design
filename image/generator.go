@@ -8,6 +8,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
+	"path/filepath"
 
 	"github.com/disintegration/imaging"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
@@ -17,36 +18,38 @@ import (
 )
 
 // GenerateImage creates a stylized image of Quran verses natively
-func GenerateImage(surahName string, startAyah, endAyah int, verses []quran.Verse, style Style, fontPath string) ([]byte, error) {
-	openingText := quran.GetOpeningText(0, startAyah)
-	if surahName == "التوبة" {
-		openingText = quran.GetOpeningText(9, startAyah)
-	}
+func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verses []quran.Verse, style Style, fontPath string) ([]byte, error) {
+	openingText := fmt.Sprintf("surah%03d", surahNum)
 
 	var versesText string
 	for _, v := range verses {
 		versesText += fmt.Sprintf("%s ﴿%s﴾ ", v.Text, quran.ConvertToArabicIndic(fmt.Sprintf("%d", v.ID)))
 	}
 
-	footerText := fmt.Sprintf("سورة %s — %s إلى %s", surahName, quran.ConvertToArabicIndic(fmt.Sprintf("%d", startAyah)), quran.ConvertToArabicIndic(fmt.Sprintf("%d", endAyah)))
-	if startAyah == endAyah {
-		footerText = fmt.Sprintf("سورة %s — الآية %s", surahName, quran.ConvertToArabicIndic(fmt.Sprintf("%d", startAyah)))
-	}
+	footerText := "تيليجرام AyatDesignBot"
 
 	// 1. Setup Fonts
-	// Use AmiriQuran for opening and footer
+	fontDir := filepath.Dir(fontPath)
+	nabiFontPath := filepath.Join(fontDir, "Nabi.ttf")
+	openingFontPath := filepath.Join(fontDir, "surah-name-v2.ttf")
+	footerFontPath := filepath.Join(fontDir, "Tajawal-Regular.ttf")
+
+	// Use Nabi for verses
 	fontFamily := canvas.NewFontFamily("Nabi")
-	if err := fontFamily.LoadFontFile(fontPath, canvas.FontRegular); err != nil {
-		return nil, fmt.Errorf("could not load font %s: %w", fontPath, err)
+	if err := fontFamily.LoadFontFile(nabiFontPath, canvas.FontRegular); err != nil {
+		return nil, fmt.Errorf("could not load font %s: %w", nabiFontPath, err)
 	}
 
-	// Use Nabi for verses as requested
-	boldFontFamily := canvas.NewFontFamily("Nabi")
-	// The path to Nabi is in the same directory as Nabi.ttf
-	boldFontPath := fontPath[:len(fontPath)-14] + "Nabi.ttf"
-	if err := boldFontFamily.LoadFontFile(boldFontPath, canvas.FontRegular); err != nil {
-		// Fallback to normal font if bold is not found
-		boldFontFamily = fontFamily
+	// Font for opening text
+	openingFontFamily := canvas.NewFontFamily("SurahName")
+	if err := openingFontFamily.LoadFontFile(openingFontPath, canvas.FontRegular); err != nil {
+		return nil, fmt.Errorf("could not load opening font: %w", err)
+	}
+
+	// Font for footer
+	footerFontFamily := canvas.NewFontFamily("Tajawal")
+	if err := footerFontFamily.LoadFontFile(footerFontPath, canvas.FontRegular); err != nil {
+		return nil, fmt.Errorf("could not load footer font: %w", err)
 	}
 
 	// 2. Setup Canvas
@@ -117,7 +120,7 @@ func GenerateImage(surahName string, startAyah, endAyah int, verses []quran.Vers
 	// tdewolff/canvas v3 handles BiDi automatically
 
 	// --- Opening Text ---
-	openingFace := boldFontFamily.Face(160.0, textColor, canvas.FontRegular, canvas.FontNormal)
+	openingFace := openingFontFamily.Face(350.0, textColor, canvas.FontRegular, canvas.FontNormal)
 	openingTxt := canvas.NewTextLine(openingFace, openingText, canvas.Center)
 	ctx.DrawText(width/2, height*0.87, openingTxt)
 
@@ -143,7 +146,7 @@ func GenerateImage(surahName string, startAyah, endAyah int, verses []quran.Vers
 	opts := &canvas.TextOptions{LineStretch: lineStretch}
 
 	for fontSize > 30.0 {
-		verseFace := boldFontFamily.Face(fontSize, textColor, canvas.FontRegular, canvas.FontNormal)
+		verseFace := fontFamily.Face(fontSize, textColor, canvas.FontRegular, canvas.FontNormal)
 
 		// Create a text box. This auto-wraps text if it exceeds boxWidth.
 		versesTxt = canvas.NewTextBox(verseFace, versesText, boxWidth, 0.0, canvas.Center, canvas.Top, opts)
@@ -165,7 +168,7 @@ func GenerateImage(surahName string, startAyah, endAyah int, verses []quran.Vers
 	ctx.DrawText(versesX, versesY, versesTxt)
 
 	// --- Footer Text ---
-	footerFace := boldFontFamily.Face(120.0, textColor, canvas.FontRegular, canvas.FontNormal)
+	footerFace := footerFontFamily.Face(120.0, textColor, canvas.FontRegular, canvas.FontNormal)
 	footerTxt := canvas.NewTextLine(footerFace, footerText, canvas.Center)
 	ctx.DrawText(width/2, height*0.06, footerTxt)
 
