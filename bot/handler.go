@@ -124,7 +124,7 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 			return c.Send("⚠️ خطأ غير متوقع: " + err.Error())
 		}
 
-		imgBytes, err := image.GenerateImage(surahName, req.StartAyah, req.EndAyah, verses, selectedStyle, fontPath)
+		imgBytes, err := image.GenerateImage(req.SurahNum, surahName, req.StartAyah, req.EndAyah, verses, selectedStyle, fontPath)
 		if err != nil {
 			log.Printf("Error generating image %s: %v", selectedStyle.Name, err)
 			return c.Send("⚠️ حدث خطأ أثناء إنشاء الصورة.")

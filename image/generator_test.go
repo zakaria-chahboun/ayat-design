@@ -25,7 +25,7 @@ func TestGenerateImage(t *testing.T) {
 	testStyle := PredefinedStyles[0]
 	// Adjust path because tests run in the image/ directory
 	testStyle.BackgroundImage = "../" + testStyle.BackgroundImage
-	imgData, err := GenerateImage(surahName, 255, 255, verses, testStyle, "../fonts/AmiriQuran.ttf")
+	imgData, err := GenerateImage(2, surahName, 255, 255, verses, testStyle, "../fonts/Nabi.ttf")
 	if err != nil {
 		t.Fatalf("GenerateImage failed: %v", err)
 	}
@@ -39,8 +39,8 @@ func TestGenerateImage(t *testing.T) {
 }
 
 func TestTextWrapping(t *testing.T) {
-	fontFamily := canvas.NewFontFamily("AmiriQuran")
-	if err := fontFamily.LoadFontFile("../fonts/AmiriQuran.ttf", canvas.FontRegular); err != nil {
+	fontFamily := canvas.NewFontFamily("Nabi")
+	if err := fontFamily.LoadFontFile("../fonts/Nabi.ttf", canvas.FontRegular); err != nil {
 		t.Fatalf("Font Error: %s\n", err.Error())
 	}
 
