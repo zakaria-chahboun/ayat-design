@@ -23,6 +23,7 @@ RUN mkdir -p /app/backgrounds /app/fonts /app/video
 
 COPY --from=builder /app/ayatbot /app/ayatbot
 COPY quran.json /app/quran.json
+COPY config.json /app/config.json
 
 RUN mkdir -p /app/fonts && \
     cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ 2>/dev/null || true
