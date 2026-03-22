@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/zakaria-chahboun/AyatDesingBot/bot"
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
@@ -18,6 +19,10 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	if err := godotenv.Load(); err != nil {
+		logger.Warn("No .env file found, relying on environment variables")
+	}
+
 	if err := config.Load("config.json"); err != nil {
 		logger.Error("Failed to load config", "error", err)
 		os.Exit(1)
@@ -28,8 +33,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if config.AppConfig.BotToken == "" {
-		logger.Error("bot_token is required in config.json")
+	if config.BotToken == "" {
+		logger.Error("BOT_TOKEN environment variable is required")
 		os.Exit(1)
 	}
 
@@ -40,7 +45,7 @@ func main() {
 	}
 
 	pref := tele.Settings{
-		Token:  config.AppConfig.BotToken,
+		Token:  config.BotToken,
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
 	}
 

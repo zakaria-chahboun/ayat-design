@@ -20,19 +20,23 @@ type Reciter struct {
 }
 
 type Config struct {
-	BotToken string    `json:"bot_token"`
 	Styles   []Style   `json:"styles"`
 	Reciters []Reciter `json:"reciters"`
 }
 
 var AppConfig Config
+var BotToken string
 
 func Load(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, &AppConfig)
+	if err := json.Unmarshal(data, &AppConfig); err != nil {
+		return err
+	}
+	BotToken = os.Getenv("BOT_TOKEN")
+	return nil
 }
 
 func GetStyleByID(id string) Style {
