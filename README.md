@@ -12,7 +12,7 @@ I made it public through a Telegram bot because it's the easiest way for anyone 
 
 This project is completely free to use. Consider it Sadaqa Jariya from me and my family.
 
-May Allah forgive my father (Abdellah) and my sister (Jamila) and accept this work as charity on their behalf. Ameen.
+May Allah forgive my father (Said) and my sister (Aicha) and accept this work as charity on their behalf. Ameen.
 
 Enjoy, and please make dua for me.
 
