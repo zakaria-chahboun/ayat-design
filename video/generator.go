@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -75,6 +76,7 @@ func GenerateVideo(
 			return nil, fmt.Errorf("فشل في قراءة مدة التلاوة: %w", err)
 		}
 		durations = append(durations, dur)
+		slog.Debug("Audio downloaded", "verse_id", v.ID, "duration_sec", dur)
 	}
 
 	outputPath := filepath.Join(tempDir, "output.mp4")
