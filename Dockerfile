@@ -16,7 +16,10 @@ RUN apk add --no-cache ffmpeg ca-certificates tzdata
 WORKDIR /app
 
 COPY --from=builder /app/ayatbot /app/ayatbot
-COPY --from=builder /app/. .
+COPY --from=builder /app/fonts/* /app/fonts/
+COPY --from=builder /app/backgrounds/* /app/backgrounds/
+COPY --from=builder /app/config.json /app/config.json
+COPY --from=builder /app/quran.json /app/quran.json
 
 EXPOSE 8080
 
