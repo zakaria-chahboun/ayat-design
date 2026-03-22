@@ -13,9 +13,16 @@ type Style struct {
 	TextColor       string  `json:"text_color"`
 }
 
+type Reciter struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Folder string `json:"folder"`
+}
+
 type Config struct {
-	BotToken string  `json:"bot_token"`
-	Styles   []Style `json:"styles"`
+	BotToken string    `json:"bot_token"`
+	Styles   []Style   `json:"styles"`
+	Reciters []Reciter `json:"reciters"`
 }
 
 var AppConfig Config
@@ -38,4 +45,16 @@ func GetStyleByID(id string) Style {
 		return AppConfig.Styles[0]
 	}
 	return Style{}
+}
+
+func GetReciterByID(id string) Reciter {
+	for _, r := range AppConfig.Reciters {
+		if r.ID == id {
+			return r
+		}
+	}
+	if len(AppConfig.Reciters) > 0 {
+		return AppConfig.Reciters[0]
+	}
+	return Reciter{}
 }

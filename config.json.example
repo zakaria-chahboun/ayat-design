@@ -36,5 +36,22 @@
       "blur_value": 3.0,
       "text_color": "white"
     }
+  ],
+  "reciters": [
+    {
+      "id": "alafasy",
+      "name": "العفاسي",
+      "folder": "Alafasy_64kbps"
+    },
+    {
+      "id": "minshawy",
+      "name": "المنشاوي",
+      "folder": "Minshawy_Murattal_128kbps"
+    },
+    {
+      "id": "husary",
+      "name": "الحصري",
+      "folder": "Husary_128kbps"
+    }
   ]
 }

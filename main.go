@@ -8,6 +8,7 @@ import (
 	"github.com/zakaria-chahboun/AyatDesingBot/bot"
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
+	"github.com/zakaria-chahboun/AyatDesingBot/video"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -30,6 +31,12 @@ func main() {
 	if config.AppConfig.BotToken == "" {
 		logger.Error("bot_token is required in config.json")
 		os.Exit(1)
+	}
+
+	if video.CheckFFmpeg() {
+		logger.Info("FFmpeg is available, video generation enabled")
+	} else {
+		logger.Warn("FFmpeg not found, video generation is disabled")
 	}
 
 	pref := tele.Settings{

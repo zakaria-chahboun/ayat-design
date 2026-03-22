@@ -11,6 +11,7 @@ import (
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/image"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
+	"github.com/zakaria-chahboun/AyatDesingBot/video"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -18,6 +19,7 @@ type RequestData struct {
 	SurahNum  int
 	StartAyah int
 	EndAyah   int
+	StyleID   string
 }
 
 var pendingRequests = make(map[int64]RequestData)
@@ -129,51 +131,179 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 		}
 
 		styleID := c.Callback().Data
-		selectedStyle := config.GetStyleByID(styleID)
+
+		pendingRequests[c.Chat().ID] = RequestData{
+			SurahNum:  req.SurahNum,
+			StartAyah: req.StartAyah,
+			EndAyah:   req.EndAyah,
+			StyleID:   styleID,
+		}
+
+		menu := &tele.ReplyMarkup{}
+		btnImage := menu.Data("🖼 صورة", "output_type", "image")
+		btnVideo := menu.Data("🎬 فيديو", "output_type", "video")
+		menu.Inline(menu.Row(btnImage, btnVideo))
+
+		c.Edit(c.Message().Text+"\n\nاختر نوع المخرجات:", menu)
+
+		return c.Respond()
+	})
+
+	b.Handle("\foutput_type", func(c tele.Context) error {
+		req, ok := pendingRequests[c.Chat().ID]
+		if !ok {
+			slog.Warn("Expired request", userAttrs(c)...)
+			return c.Respond(&tele.CallbackResponse{Text: "انتهت صلاحية الطلب، يرجى إرساله مجدداً."})
+		}
+
+		outputType := c.Callback().Data
+		selectedStyle := config.GetStyleByID(req.StyleID)
+
+		if outputType == "image" {
+			delete(pendingRequests, c.Chat().ID)
+
+			c.Edit(c.Message().Text + "\n\n⏳ جاري التصميم (" + selectedStyle.Name + ")...")
+
+			slog.Info("User selected image output, generating image",
+				append(userAttrs(c),
+					slog.String("style_id", req.StyleID),
+					slog.String("style_name", selectedStyle.Name),
+					slog.Int("surah_num", req.SurahNum),
+					slog.Int("start_ayah", req.StartAyah),
+					slog.Int("end_ayah", req.EndAyah),
+				)...,
+			)
+
+			verses, surahName, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
+			if err != nil {
+				slog.Error("Failed to fetch verses", append(userAttrs(c), slog.String("error", err.Error()))...)
+				return c.Send("⚠️ خطأ غير متوقع: " + err.Error())
+			}
+
+			imgBytes, err := image.GenerateImage(req.SurahNum, surahName, req.StartAyah, req.EndAyah, verses, selectedStyle, fontPath)
+			if err != nil {
+				slog.Error("Failed to generate image",
+					append(userAttrs(c),
+						slog.String("style", selectedStyle.Name),
+						slog.String("error", err.Error()),
+					)...,
+				)
+				return c.Send("⚠️ حدث خطأ أثناء إنشاء الصورة.")
+			}
+
+			slog.Info("Image generated and sent",
+				append(userAttrs(c),
+					slog.String("surah", surahName),
+					slog.String("style", selectedStyle.Name),
+					slog.Int("image_size_bytes", len(imgBytes)),
+				)...,
+			)
+
+			photo := &tele.Photo{File: tele.FromReader(bytes.NewReader(imgBytes))}
+			c.Send(photo)
+
+			return c.Respond()
+		}
+
+		verses, _, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
+		if err != nil {
+			return c.Send("⚠️ " + err.Error())
+		}
+
+		if len(verses) > 3 {
+			return c.Send("⚠️ الفيديو يدعم ٣ آيات كحد أقصى. يرجى تقليل عدد الآيات.")
+		}
+
+		menu := &tele.ReplyMarkup{}
+		var rows []tele.Row
+		for _, reciter := range config.AppConfig.Reciters {
+			btn := menu.Data(reciter.Name, "select_reciter", reciter.ID)
+			rows = append(rows, menu.Row(btn))
+		}
+		menu.Inline(rows...)
+
+		c.Edit(c.Message().Text+"\n\nاختر القارئ:", menu)
+
+		return c.Respond()
+	})
+
+	b.Handle("\fselect_reciter", func(c tele.Context) error {
+		req, ok := pendingRequests[c.Chat().ID]
+		if !ok {
+			slog.Warn("Expired request", userAttrs(c)...)
+			return c.Respond(&tele.CallbackResponse{Text: "انتهت صلاحية الطلب، يرجى إرساله مجدداً."})
+		}
+
+		reciterID := c.Callback().Data
+		selectedReciter := config.GetReciterByID(reciterID)
+		selectedStyle := config.GetStyleByID(req.StyleID)
 
 		delete(pendingRequests, c.Chat().ID)
 
-		c.Edit(c.Message().Text + "\n\n⏳ جاري التصميم (" + selectedStyle.Name + ")...")
+		c.Send("⏳ جاري تحميل التلاوة وإنشاء الفيديو، قد يستغرق ذلك بضع ثوانٍ...")
 
-		slog.Info("User selected style, generating image",
+		slog.Info("User selected video output, generating video",
 			append(userAttrs(c),
-				slog.String("style_id", styleID),
-				slog.String("style_name", selectedStyle.Name),
+				slog.String("style_id", req.StyleID),
+				slog.String("reciter_id", reciterID),
+				slog.String("reciter_name", selectedReciter.Name),
 				slog.Int("surah_num", req.SurahNum),
 				slog.Int("start_ayah", req.StartAyah),
 				slog.Int("end_ayah", req.EndAyah),
 			)...,
 		)
 
-		verses, surahName, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
-		if err != nil {
-			slog.Error("Failed to fetch verses",
-				append(userAttrs(c), slog.String("error", err.Error()))...,
-			)
-			return c.Send("⚠️ خطأ غير متوقع: " + err.Error())
+		if !video.IsFFmpegAvailable() {
+			slog.Error("FFmpeg not available", userAttrs(c)...)
+			return c.Send("⚠️ حدث خطأ أثناء إنشاء الفيديو. يرجى المحاولة لاحقاً.")
 		}
 
-		imgBytes, err := image.GenerateImage(req.SurahNum, surahName, req.StartAyah, req.EndAyah, verses, selectedStyle, fontPath)
+		verses, surahName, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
 		if err != nil {
-			slog.Error("Failed to generate image",
+			slog.Error("Failed to fetch verses", append(userAttrs(c), slog.String("error", err.Error()))...)
+			return c.Send("⚠️ حدث خطأ أثناء إنشاء الفيديو. يرجى المحاولة لاحقاً.")
+		}
+
+		images := make([][]byte, len(verses))
+		for i, v := range verses {
+			verseList := []quran.Verse{v}
+			imgBytes, err := image.GenerateImage(req.SurahNum, surahName, v.ID, v.ID, verseList, selectedStyle, fontPath)
+			if err != nil {
+				slog.Error("Failed to generate image for verse",
+					append(userAttrs(c),
+						slog.Int("verse_id", v.ID),
+						slog.String("error", err.Error()),
+					)...,
+				)
+				return c.Send("⚠️ حدث خطأ أثناء إنشاء الفيديو. يرجى المحاولة لاحقاً.")
+			}
+			images[i] = imgBytes
+		}
+
+		videoBytes, err := video.GenerateVideo(req.SurahNum, verses, images, selectedReciter.Folder, selectedStyle, fontPath, c.Sender().ID)
+		if err != nil {
+			slog.Error("Failed to generate video",
 				append(userAttrs(c),
-					slog.String("style", selectedStyle.Name),
 					slog.String("error", err.Error()),
 				)...,
 			)
-			return c.Send("⚠️ حدث خطأ أثناء إنشاء الصورة.")
+			return c.Send("⚠️ حدث خطأ أثناء إنشاء الفيديو. يرجى المحاولة لاحقاً.")
 		}
 
-		slog.Info("Image generated and sent",
+		slog.Info("Video generated and sent",
 			append(userAttrs(c),
 				slog.String("surah", surahName),
 				slog.String("style", selectedStyle.Name),
-				slog.Int("image_size_bytes", len(imgBytes)),
+				slog.String("reciter", selectedReciter.Name),
+				slog.Int("video_size_bytes", len(videoBytes)),
 			)...,
 		)
 
-		photo := &tele.Photo{File: tele.FromReader(bytes.NewReader(imgBytes))}
-		c.Send(photo)
+		videoMsg := &tele.Video{
+			File:    tele.FromReader(bytes.NewReader(videoBytes)),
+			Caption: fmt.Sprintf("سورة %s - القارئ: %s", surahName, selectedReciter.Name),
+		}
+		c.Send(videoMsg)
 
 		return c.Respond()
 	})
