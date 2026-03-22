@@ -24,9 +24,6 @@ profile.cov
 go.work
 go.work.sum
 
-# config file
-config.json
-
 # Editor/IDE
 # .idea/
 # .vscode/
