@@ -2,7 +2,7 @@
 
 Quran verse images and videos bot on Telegram.
 
-![Logo](logo.png)
+<img src="logo.png" width="300" alt="Logo">
 
 ## The Story
 
