@@ -179,9 +179,9 @@ func buildFilterGraph(numVerses int, durations []float64, totalDur float64) (str
 	if numVerses == 1 {
 		fadeOutStart := totalDur - fadeOutDuration
 		filter := fmt.Sprintf(
-			"[0:v]fade=t=in:st=0:d=%.1f,fade=t=out:st=%.3f:d=%.1f[vout]",
+			"[0:v]fade=t=in:st=0:d=%.1f,fade=t=out:st=%.3f:d=%.1f[vout];[1:a]anull[aout]",
 			fadeInDuration, fadeOutStart, fadeOutDuration)
-		return filter, "a0:a"
+		return filter, "aout"
 	}
 
 	var videoParts []string
