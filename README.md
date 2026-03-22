@@ -39,15 +39,13 @@ Examples:
 
 **Images:**
 
-![Al-Hajj](examples/alhaj.jpg)
-
-![An-Nahl](examples/alnahl.jpg)
+<img src="examples/alhaj.jpg" width="300" alt="Al-Hajj">
+<img src="examples/alnahl.jpg" width="300" alt="An-Nahl">
 
 **Videos:**
 
-![Al-Kawthar](examples/alkawtar.mp4)
-
-![Al-Mulk](examples/almulk.mp4)
+<video src="examples/alkawtar.mp4" width="300" controls></video>
+<video src="examples/almulk.mp4" width="300" controls></video>
 
 ## Tech Stack
 
