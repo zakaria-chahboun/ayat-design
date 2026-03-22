@@ -20,9 +20,9 @@ const (
 	everyAyahBaseURL  = "https://everyayah.com/data/"
 	fetchTimeout      = 15 * time.Second
 	silencePadding    = 0.3
-	fadeInDuration    = 1.0
+	fadeInDuration    = 1.5
 	crossfadeDuration = 0.5
-	fadeOutDuration   = 1.0
+	fadeOutDuration   = 2.0
 )
 
 func GenerateVideo(
@@ -146,8 +146,6 @@ func buildAndRunFFmpeg(tempDir string, numVerses int, durations []float64, outpu
 		args = append(args, "-loop", "1", "-t", fmt.Sprintf("%.3f", durations[i]+silencePadding), "-i", framePath)
 	}
 
-	args = append(args, "-f", "lavfi", "-i", fmt.Sprintf("color=c=black:s=1080x1920:d=%.3f", 0.1))
-
 	for i := 0; i < numVerses; i++ {
 		audioPath := filepath.Join(tempDir, fmt.Sprintf("audio_%03d.mp3", i))
 		args = append(args, "-i", audioPath)
@@ -178,12 +176,11 @@ func buildAndRunFFmpeg(tempDir string, numVerses int, durations []float64, outpu
 }
 
 func buildFilterGraph(numVerses int, durations []float64, totalDur float64) (string, string) {
-	blackIdx := numVerses
-
 	if numVerses == 1 {
+		fadeOutStart := totalDur - fadeOutDuration
 		filter := fmt.Sprintf(
-			"[0:v]fade=t=in:st=0:d=%.1f[v1];[v1][%d:v]xfade=transition=fade:duration=%.1f:offset=%.3f[vout]",
-			fadeInDuration, blackIdx, fadeOutDuration, totalDur-fadeOutDuration)
+			"[0:v]fade=t=in:st=0:d=%.1f,fade=t=out:st=%.3f:d=%.1f[vout]",
+			fadeInDuration, fadeOutStart, fadeOutDuration)
 		return filter, "a0:a"
 	}
 
@@ -194,21 +191,18 @@ func buildFilterGraph(numVerses int, durations []float64, totalDur float64) (str
 	prevOutput = "[v0fade]"
 
 	offset := durations[0] + silencePadding - crossfadeDuration
-	for i := 1; i < numVerses-1; i++ {
-		videoParts = append(videoParts, fmt.Sprintf("%s[%d:v]xfade=transition=fade:duration=%.1f:offset=%.3f[vout%d]", prevOutput, i, crossfadeDuration, offset, i))
+	for i := 1; i < numVerses; i++ {
+		videoParts = append(videoParts, fmt.Sprintf("%s[%d:v]xfade=transition=fade:duration=%.1f:offset=%.3f[vout]", prevOutput, i, crossfadeDuration, offset))
 		offset += durations[i] + silencePadding - crossfadeDuration
-		prevOutput = fmt.Sprintf("[vout%d]", i)
+		prevOutput = "[vout]"
 	}
 
-	lastXfadeOffset := offset
-	videoParts = append(videoParts, fmt.Sprintf("%s[%d:v]xfade=transition=fade:duration=%.1f:offset=%.3f[vout]", prevOutput, numVerses-1, crossfadeDuration, lastXfadeOffset))
-
-	finalOffset := totalDur - fadeOutDuration
-	videoParts = append(videoParts, fmt.Sprintf("[vout][%d:v]xfade=transition=fade:duration=%.1f:offset=%.3f[vout]", blackIdx, fadeOutDuration, finalOffset))
+	fadeOutStart := totalDur - fadeOutDuration
+	videoParts = append(videoParts, fmt.Sprintf("[vout]fade=t=out:st=%.3f:d=%.1f[vout]", fadeOutStart, fadeOutDuration))
 
 	var audioInputs []string
 	for i := 0; i < numVerses; i++ {
-		audioInputs = append(audioInputs, fmt.Sprintf("[%d:a]", numVerses+1+i))
+		audioInputs = append(audioInputs, fmt.Sprintf("[%d:a]", numVerses+i))
 	}
 	audioConcat := "aout"
 	audioChain := fmt.Sprintf("%sconcat=n=%d:v=0:a=1[%s]", strings.Join(audioInputs, ""), numVerses, audioConcat)
