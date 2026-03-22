@@ -9,6 +9,8 @@ import (
 	_ "image/png"
 	"os"
 	"path/filepath"
+	"strings"
+	"unicode"
 
 	"github.com/disintegration/imaging"
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
@@ -18,6 +20,114 @@ import (
 	"github.com/tdewolff/canvas/renderers"
 )
 
+// Unicode BiDi control characters
+const (
+	RLM = "\u200F" // Right-to-Left Mark — forces RTL context around a token
+	RLE = "\u202B" // Right-to-Left Embedding
+	PDF = "\u202C" // Pop Directional Formatting
+)
+
+// isQuranicAnnotation returns true for standalone Quranic pause/annotation marks
+// in the range U+06D6–U+06ED that appear as isolated space-separated tokens.
+func isQuranicAnnotation(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if unicode.IsSpace(r) {
+			continue
+		}
+		if r >= 0x06D6 && r <= 0x06ED {
+			return true
+		}
+		if r >= 0x0750 && r <= 0x077F {
+			return true
+		}
+		if r >= 0x08A0 && r <= 0x08FF {
+			return true
+		}
+	}
+	return false
+}
+
+// normalizeVerseText:
+//  1. Merges standalone Quranic annotation marks into the preceding word.
+//  2. Wraps ornamental verse-number brackets ﴿N﴾ with RLM marks so BiDi
+//     renders them correctly (closing bracket on the right in RTL context).
+func normalizeVerseText(text string) string {
+	parts := strings.Split(text, " ")
+	var merged []string
+	for _, p := range parts {
+		if p == "" {
+			continue
+		}
+		if isQuranicAnnotation(p) && len(merged) > 0 {
+			merged[len(merged)-1] = merged[len(merged)-1] + " " + p
+		} else {
+			// Wrap tokens that start with ﴿ (U+FD3F) with RLM on both sides.
+			// Without this, the Unicode BiDi algorithm treats the opening bracket
+			// as a neutral character and may mirror it, placing it on the wrong side.
+			if strings.ContainsRune(p, '\uFD3F') || strings.ContainsRune(p, '\uFD3E') {
+				p = RLM + p + RLM
+			}
+			merged = append(merged, p)
+		}
+	}
+	return strings.Join(merged, " ")
+}
+
+// wrapArabicText manually breaks Arabic text into lines that fit within maxWidth,
+// always breaking at word (space) boundaries — never mid-word.
+// Returns both the wrapped string and the number of lines produced.
+func wrapArabicText(face *canvas.FontFace, text string, maxWidth float64) (string, int) {
+	text = normalizeVerseText(text)
+
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return text, 1
+	}
+
+	var lines []string
+	currentLine := ""
+
+	for _, word := range words {
+		candidate := word
+		if currentLine != "" {
+			candidate = currentLine + " " + word
+		}
+
+		t := canvas.NewTextLine(face, candidate, canvas.Center)
+		bounds := t.Bounds()
+
+		if bounds.W() <= maxWidth {
+			currentLine = candidate
+		} else {
+			if currentLine != "" {
+				lines = append(lines, currentLine)
+			}
+			currentLine = word
+		}
+	}
+	if currentLine != "" {
+		lines = append(lines, currentLine)
+	}
+
+	return strings.Join(lines, "\n"), len(lines)
+}
+
+// estimateTextHeight returns an accurate height estimate for N lines at the given
+// font size, using a single measured line height plus line spacing.
+// This is used to pre-check fit BEFORE calling NewTextBox, avoiding the silent
+// clipping that happens when NewTextBox receives a height smaller than its content.
+func estimateTextHeight(face *canvas.FontFace, sampleLine string, numLines int, lineStretch float64) float64 {
+	t := canvas.NewTextLine(face, sampleLine, canvas.Center)
+	b := t.Bounds()
+	lineH := b.H()
+	// canvas applies lineStretch as extra spacing between lines
+	spacing := lineH * lineStretch
+	return float64(numLines)*lineH + float64(numLines-1)*spacing
+}
+
 // GenerateImage creates a stylized image of Quran verses natively
 func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verses []quran.Verse, style config.Style, fontPath string) ([]byte, error) {
 	openingText := fmt.Sprintf("surah%03d", surahNum)
@@ -26,6 +136,7 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 	for _, v := range verses {
 		versesText += fmt.Sprintf("%s ﴿%s﴾ ", v.Text, quran.ConvertToArabicIndic(fmt.Sprintf("%d", v.ID)))
 	}
+	versesText = strings.TrimSpace(versesText)
 
 	footerText := "تيليجرام AyatDesignBot"
 
@@ -35,19 +146,16 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 	openingFontPath := filepath.Join(fontDir, "surah-name-v2.ttf")
 	footerFontPath := filepath.Join(fontDir, "Tajawal-Regular.ttf")
 
-	// Use Nabi for verses
 	fontFamily := canvas.NewFontFamily("Nabi")
 	if err := fontFamily.LoadFontFile(nabiFontPath, canvas.FontRegular); err != nil {
 		return nil, fmt.Errorf("could not load font %s: %w", nabiFontPath, err)
 	}
 
-	// Font for opening text
 	openingFontFamily := canvas.NewFontFamily("SurahName")
 	if err := openingFontFamily.LoadFontFile(openingFontPath, canvas.FontRegular); err != nil {
 		return nil, fmt.Errorf("could not load opening font: %w", err)
 	}
 
-	// Font for footer
 	footerFontFamily := canvas.NewFontFamily("Tajawal")
 	if err := footerFontFamily.LoadFontFile(footerFontPath, canvas.FontRegular); err != nil {
 		return nil, fmt.Errorf("could not load footer font: %w", err)
@@ -56,6 +164,8 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 	// 2. Setup Canvas
 	const width = 1080.0
 	const height = 1920.0
+	// const width = 810.0
+	// const height = 1440.0
 	c := canvas.New(width, height)
 	ctx := canvas.NewContext(c)
 
@@ -71,115 +181,107 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 		return nil, fmt.Errorf("failed to decode background image: %w", err)
 	}
 
-	// Apply blur if applicable
 	if style.BlurValue > 0 {
 		bgImg = imaging.Blur(bgImg, style.BlurValue)
 	}
 
-	// Calculate aspect-fill scale
 	bgW := float64(bgImg.Bounds().Dx())
 	bgH := float64(bgImg.Bounds().Dy())
 	scale := width / bgW
 	if (height / bgH) > scale {
 		scale = height / bgH
 	}
-
-	// Draw image scaled from bottom-left origin
-	// To center it, offset X and Y
 	scaledW := bgW * scale
 	scaledH := bgH * scale
 	offsetX := (width - scaledW) / 2
 	offsetY := (height - scaledH) / 2
 
-	// Render Image using a DrawImage or similar API.
-	// Actually `tdewolff/canvas` DrawImage is straightforward:
-	// Let's create an affine transform to scale and center.
-	ctx.SetFillColor(canvas.Black) // Background color fallback
+	ctx.SetFillColor(canvas.Black)
 	ctx.DrawPath(0, 0, canvas.Rectangle(width, height))
-
-	// Create an Image element
-	// Wait, tdewolff/canvas doesn't use standard DrawImage matrix right away,
-	// let's do Push/SetMatrix/DrawImage/Pop or just draw.
-	// `ctx.DrawImage(offsetX, offsetY, img, resolution)` - Actually resolution is dpi/dpm.
-	// Since we want `img` to fit exactly `scaledW` and `scaledH`,
-	// The resolution specifies pixels per mm. Default canvas unit is mm.
-	// If canvas width is 1080 mm, resolution = bgW / scaledW.
 	imgResolution := canvas.Resolution(bgW / scaledW)
 	ctx.DrawImage(offsetX, offsetY, bgImg, imgResolution)
 
-	// 4. Draw Overlay (50% opacity)
+	// 4. Draw Overlay
 	var textColor color.Color = canvas.White
 	if style.TextColor == "black" {
 		textColor = canvas.Black
-		ctx.SetFillColor(canvas.RGBA(255, 255, 255, 128)) // Light overlay for black text
+		ctx.SetFillColor(canvas.RGBA(255, 255, 255, 128))
 	} else {
-		ctx.SetFillColor(canvas.RGBA(0, 0, 0, 128)) // Dark overlay for white text
+		ctx.SetFillColor(canvas.RGBA(0, 0, 0, 128))
 	}
 	ctx.DrawPath(0, 0, canvas.Rectangle(width, height))
 
 	// 5. Draw Texts
-	// tdewolff/canvas v3 handles BiDi automatically
 
-	// --- Opening Text ---
+	// --- Opening (Surah glyph) ---
 	openingFace := openingFontFamily.Face(350.0, textColor, canvas.FontRegular, canvas.FontNormal)
 	openingTxt := canvas.NewTextLine(openingFace, openingText, canvas.Center)
 	ctx.DrawText(width/2, height*0.87, openingTxt)
 
 	// --- Main Verses ---
-	// Start with a very large font size and scale down until the text fits in the vertical box bounds
 	boxWidth := width * 0.85
-	maxBoxHeight := height * 0.70 // Maximum vertical space for verses
+	maxBoxHeight := height * 0.68
+
+	lineStretch := 0.0
+	charsCount := len([]rune(versesText))
+	switch {
+	case charsCount < 80:
+		lineStretch = 0.8
+	case charsCount < 200:
+		lineStretch = 0.4
+	case charsCount < 400:
+		lineStretch = 0.2
+	}
+	opts := &canvas.TextOptions{LineStretch: lineStretch}
 
 	fontSize := 250.0
 	var versesTxt *canvas.Text
 	var versesBounds canvas.Rect
 
-	// Dynamic line spacing: Add more space between lines for shorter text
-	var lineStretch float64 = 0.0
-	charsCount := len([]rune(versesText))
-	if charsCount < 80 {
-		lineStretch = 0.8
-	} else if charsCount < 200 {
-		lineStretch = 0.4
-	} else if charsCount < 400 {
-		lineStretch = 0.2
-	}
-	opts := &canvas.TextOptions{LineStretch: lineStretch}
-
 	for fontSize > 30.0 {
 		verseFace := fontFamily.Face(fontSize, textColor, canvas.FontRegular, canvas.FontNormal)
 
-		// Create a text box. This auto-wraps text if it exceeds boxWidth.
-		versesTxt = canvas.NewTextBox(verseFace, versesText, boxWidth, 0.0, canvas.Center, canvas.Top, opts)
-		versesBounds = versesTxt.Bounds()
+		// Pre-wrap at word boundaries
+		wrappedText, numLines := wrapArabicText(verseFace, versesText, boxWidth)
 
-		// A text box fits if its visual Height is less than our allowed maxBoxHeight
-		if versesBounds.H() <= maxBoxHeight && versesBounds.W() <= boxWidth {
-			break
+		// FIX: Estimate the actual rendered height BEFORE passing to NewTextBox.
+		// NewTextBox silently clips content that exceeds its height argument —
+		// it does NOT return an error or expand. So we must verify fit ourselves
+		// using a direct line-height measurement, then only call NewTextBox when
+		// we know the content will fit without clipping.
+		estimatedH := estimateTextHeight(verseFace, "أ", numLines, lineStretch)
+		if estimatedH > maxBoxHeight {
+			fontSize -= 5.0
+			continue
 		}
 
+		// Pass a very large height to NewTextBox so it never clips — we've already
+		// ensured the content fits via our estimate above.
+		versesTxt = canvas.NewTextBox(verseFace, wrappedText, boxWidth, maxBoxHeight*2, canvas.Center, canvas.Top, opts)
+		versesBounds = versesTxt.Bounds()
+
+		if versesBounds.W() <= boxWidth {
+			break
+		}
 		fontSize -= 5.0
 	}
 
-	// Center the text box physically
-	// versesTxt uses Top-Left origin natively when instantiated via NewTextBox with canvas.Top.
-	// We want its center to be at the center of the canvas
-	versesX := (width - versesBounds.W()) / 2
-	versesY := (height + versesBounds.H()) / 2
+	// Center the text block vertically on the canvas.
+	// canvas Y=0 is bottom, DrawText places bottom-left of text at (x,y).
+	versesX := (width - boxWidth) / 2
+	versesY := height/2 + versesBounds.H()/2
 	ctx.DrawText(versesX, versesY, versesTxt)
 
-	// --- Footer Text ---
+	// --- Footer ---
 	footerFace := footerFontFamily.Face(120.0, textColor, canvas.FontRegular, canvas.FontNormal)
 	footerTxt := canvas.NewTextLine(footerFace, footerText, canvas.Center)
 	ctx.DrawText(width/2, height*0.06, footerTxt)
 
 	// 6. Encode Output
 	buf := new(bytes.Buffer)
-
-	// renderers.JPEG returns a Writer function
-	writerFn := renderers.JPEG(canvas.DPMM(1.0))
+	writerFn := renderers.PNG(canvas.DPMM(1.0))
 	if err := writerFn(buf, c); err != nil {
-		return nil, fmt.Errorf("failed to encode jpeg: %w", err)
+		return nil, fmt.Errorf("failed to encode png: %w", err)
 	}
 
 	return buf.Bytes(), nil
