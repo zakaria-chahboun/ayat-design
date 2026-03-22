@@ -1,0 +1,10 @@
+services:
+  bot:
+    build: .
+    volumes:
+      - ./.env:/app/.env
+      - ./backgrounds:/app/backgrounds
+      - ./fonts:/app/fonts
+      - ./video:/app/video
+      - ./config.json:/app/config.json:ro
+    restart: unless-stopped
