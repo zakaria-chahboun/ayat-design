@@ -36,7 +36,7 @@ func userAttrs(c tele.Context) []any {
 func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 	b.Handle("/start", func(c tele.Context) error {
 		slog.Info("User started bot", userAttrs(c)...)
-		msg := "مرحباً بك في روبوت آيات 📖\n\nأرسل طلبك بالصيغة التالية:\n[اسم السورة] [رقم الآية أو من-إلى]\n\nمثال:\nالبقرة 2-3\nآل عمران 7"
+		msg := "مرحباً بك في روبوت آيات وأجر 📖\n\nأرسل طلبك بالصيغة التالية:\n[اسم السورة] [رقم الآية أو من-إلى]\n\nمثال:\nالبقرة 2-3\nآل عمران 7"
 		return c.Send(msg)
 	})
 
