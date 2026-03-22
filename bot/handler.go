@@ -142,7 +142,7 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 		menu := &tele.ReplyMarkup{}
 		btnImage := menu.Data("🖼 صورة", "output_type", "image")
 		btnVideo := menu.Data("🎬 فيديو", "output_type", "video")
-		menu.Inline(menu.Row(btnImage, btnVideo))
+		menu.Inline(menu.Row(btnImage), menu.Row(btnVideo))
 
 		c.Edit(c.Message().Text+"\n\nاختر نوع المخرجات:", menu)
 
@@ -199,7 +199,8 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 				)...,
 			)
 
-			photo := &tele.Photo{File: tele.FromReader(bytes.NewReader(imgBytes))}
+			caption := fmt.Sprintf("سورة %s (%d-%d)", surahName, req.StartAyah, req.EndAyah)
+			photo := &tele.Photo{File: tele.FromReader(bytes.NewReader(imgBytes)), Caption: caption}
 			c.Send(photo)
 
 			return c.Respond()
@@ -299,9 +300,10 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 			)...,
 		)
 
+		caption := fmt.Sprintf("سورة %s (%d-%d)", surahName, req.StartAyah, req.EndAyah)
 		videoMsg := &tele.Video{
 			File:    tele.FromReader(bytes.NewReader(videoBytes)),
-			Caption: fmt.Sprintf("سورة %s - القارئ: %s", surahName, selectedReciter.Name),
+			Caption: caption,
 		}
 		c.Send(videoMsg)
 
