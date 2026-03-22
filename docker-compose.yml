@@ -2,7 +2,7 @@ services:
   bot:
     build: .
     volumes:
-      - ./.env:/app/.env
+      - ./.env:/app/.env:ro
       - ./backgrounds:/app/backgrounds
       - ./fonts:/app/fonts
       - ./video:/app/video
