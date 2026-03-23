@@ -79,18 +79,7 @@ Define background images and text colors for verse designs.
 ### Reciters
 Configure Quran reciters. Audio is fetched from [everyayah.com](https://everyayah.com/data/).
 
-## Creator
-
-FFmpeg handles video generation. Go manages everything else.
-
-Why Go and FFmpeg instead of Chrome headless or Python?
-
-- No Docker needed, just install FFmpeg and run
-- Go compiles to a single binary, deploy anywhere
-- FFmpeg is fast and handles video encoding efficiently
-- Go is faster than Python or JavaScript for this kind of work
-- No browser overhead, keeps things lightweight
 
 ## Creator
-
+تم بفضل الله وبحمده وتيسيره
 Zakaria Chahboun
