@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log/slog"
 	"os"
 	"time"
@@ -10,10 +11,14 @@ import (
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 	"github.com/zakaria-chahboun/AyatDesingBot/video"
+	"github.com/zakaria-chahboun/AyatDesingBot/web"
 	tele "gopkg.in/telebot.v3"
 )
 
 func main() {
+	serveWeb := flag.Bool("web", false, "Serve web landing page")
+	flag.Parse()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
@@ -21,6 +26,18 @@ func main() {
 
 	if err := godotenv.Load(); err != nil {
 		logger.Warn("No .env file found, relying on environment variables")
+	}
+
+	if *serveWeb {
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8080"
+		}
+		logger.Info("Starting web server", "port", port)
+		if err := web.Run(port); err != nil {
+			logger.Error("Web server error", "error", err)
+		}
+		return
 	}
 
 	if err := config.Load("config.json"); err != nil {
