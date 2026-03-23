@@ -20,10 +20,10 @@ import (
 const (
 	everyAyahBaseURL  = "https://everyayah.com/data/"
 	fetchTimeout      = 15 * time.Second
-	silencePadding    = 0.3
-	fadeInDuration    = 1.5
-	crossfadeDuration = 0.5
-	fadeOutDuration   = 2.0
+	silencePadding    = 0.0
+	fadeInDuration    = 0.6
+	crossfadeDuration = 0.4
+	fadeOutDuration   = 0.8
 )
 
 func GenerateVideo(
@@ -162,10 +162,10 @@ func buildAndRunFFmpeg(tempDir string, numVerses int, durations []float64, outpu
 	filterComplex, audioConcat := buildFilterGraph(numVerses, durations, totalDur)
 	args = append(args, "-filter_complex", filterComplex)
 	args = append(args, "-map", "[vout]", "-map", fmt.Sprintf("[%s]", audioConcat))
-	args = append(args, "-c:v", "libx264", "-preset", "fast", "-crf", "23")
-	args = append(args, "-c:a", "aac", "-b:a", "128k")
-	args = append(args, "-pix_fmt", "yuv420p")
-	args = append(args, "-movflags", "+faststart")
+	args = append(args, "-c:v", "libx264", "-preset", "veryfast", "-crf", "27", "-tune", "stillimage")
+	args = append(args, "-r", "24")
+	args = append(args, "-c:a", "aac", "-b:a", "96k")
+	args = append(args, "-pix_fmt", "yuv420p", "-movflags", "+faststart")
 	args = append(args, "-y", outputPath)
 
 	cmd := exec.Command("ffmpeg", args...)
@@ -181,7 +181,7 @@ func buildFilterGraph(numVerses int, durations []float64, totalDur float64) (str
 	if numVerses == 1 {
 		fadeOutStart := totalDur - fadeOutDuration
 		filter := fmt.Sprintf(
-			"[0:v]fade=t=in:st=0:d=%.1f,fade=t=out:st=%.3f:d=%.1f[vout];[1:a]anull[aout]",
+			"[0:v]fade=t=in:st=0:d=%.1f,fade=t=out:st=%.3f:d=%.1f,scale=720:-2:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2[vout];[1:a]anull[aout]",
 			fadeInDuration, fadeOutStart, fadeOutDuration)
 		return filter, "aout"
 	}
@@ -200,7 +200,7 @@ func buildFilterGraph(numVerses int, durations []float64, totalDur float64) (str
 	}
 
 	fadeOutStart := totalDur - fadeOutDuration
-	videoParts = append(videoParts, fmt.Sprintf("[vout]fade=t=out:st=%.3f:d=%.1f[vout]", fadeOutStart, fadeOutDuration))
+	videoParts = append(videoParts, fmt.Sprintf("[vout]fade=t=out:st=%.3f:d=%.1f,scale=720:-2:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2[vout]", fadeOutStart, fadeOutDuration))
 
 	var audioInputs []string
 	for i := 0; i < numVerses; i++ {
