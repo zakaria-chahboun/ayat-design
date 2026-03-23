@@ -20,7 +20,9 @@ COPY --from=builder /app/fonts/* /app/fonts/
 COPY --from=builder /app/backgrounds/* /app/backgrounds/
 COPY --from=builder /app/config.json /app/config.json
 COPY --from=builder /app/quran.json /app/quran.json
+COPY --from=builder /app/web/static /app/web/static
+COPY --from=builder /app/examples /app/examples
 
 EXPOSE 8080
 
-CMD ["/app/ayatbot"]
+CMD ["/app/ayatbot", "-web"]
