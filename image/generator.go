@@ -162,10 +162,8 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 	}
 
 	// 2. Setup Canvas
-	const width = 1080.0
-	const height = 1920.0
-	// const width = 810.0
-	// const height = 1440.0
+	const width = 720.0
+	const height = 1280.0
 	c := canvas.New(width, height)
 	ctx := canvas.NewContext(c)
 
@@ -214,7 +212,7 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 	// 5. Draw Texts
 
 	// --- Opening (Surah glyph) ---
-	openingFace := openingFontFamily.Face(350.0, textColor, canvas.FontRegular, canvas.FontNormal)
+	openingFace := openingFontFamily.Face(235.0, textColor, canvas.FontRegular, canvas.FontNormal)
 	openingTxt := canvas.NewTextLine(openingFace, openingText, canvas.Center)
 	ctx.DrawText(width/2, height*0.87, openingTxt)
 
@@ -234,11 +232,11 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 	}
 	opts := &canvas.TextOptions{LineStretch: lineStretch}
 
-	fontSize := 250.0
+	fontSize := 167.0
 	var versesTxt *canvas.Text
 	var versesBounds canvas.Rect
 
-	for fontSize > 30.0 {
+	for fontSize > 20.0 {
 		verseFace := fontFamily.Face(fontSize, textColor, canvas.FontRegular, canvas.FontNormal)
 
 		// Pre-wrap at word boundaries
@@ -273,7 +271,7 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 	ctx.DrawText(versesX, versesY, versesTxt)
 
 	// --- Footer ---
-	footerFace := footerFontFamily.Face(120.0, textColor, canvas.FontRegular, canvas.FontNormal)
+	footerFace := footerFontFamily.Face(80.0, textColor, canvas.FontRegular, canvas.FontNormal)
 	footerTxt := canvas.NewTextLine(footerFace, footerText, canvas.Center)
 	ctx.DrawText(width/2, height*0.06, footerTxt)
 
