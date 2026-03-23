@@ -40,7 +40,7 @@ Examples:
 **Images:**
 
 <img src="examples/alhaj.jpg" width="300" alt="Al-Hajj">
-<img src="examples/alnahl.jpg" width="300" alt="An-Nahl">
+<img src="examples/alqalam.jpg" width="300" alt="An-Qalam">
 
 **Videos:**
 
