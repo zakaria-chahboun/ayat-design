@@ -67,8 +67,15 @@ func GenerateVideo(
 		audioURL := fmt.Sprintf("%s%s/%s%s.mp3", everyAyahBaseURL, reciterFolder, surahPadded, versePadded)
 		audioPath := filepath.Join(tempDir, fmt.Sprintf("audio_%03d.mp3", i))
 
-		if err := downloadFile(audioURL, audioPath); err != nil {
-			return nil, fmt.Errorf("فشل في تحميل التلاوة للآية %d: %w", v.ID, err)
+		if config.AppConfig.Cache.Audio {
+			cachePath := filepath.Join("cache", "audio", reciterFolder, fmt.Sprintf("%s%s.mp3", surahPadded, versePadded))
+			if err := getCachedAudio(audioURL, cachePath, audioPath); err != nil {
+				return nil, fmt.Errorf("فشل في تحميل التلاوة للآية %d: %w", v.ID, err)
+			}
+		} else {
+			if err := downloadFile(audioURL, audioPath); err != nil {
+				return nil, fmt.Errorf("فشل في تحميل التلاوة للآية %d: %w", v.ID, err)
+			}
 		}
 
 		dur, err := getAudioDuration(audioPath)
@@ -76,7 +83,7 @@ func GenerateVideo(
 			return nil, fmt.Errorf("فشل في قراءة مدة التلاوة: %w", err)
 		}
 		durations = append(durations, dur)
-		slog.Debug("Audio downloaded", "verse_id", v.ID, "duration_sec", dur)
+		slog.Info("Audio ready", "verse_id", v.ID, "duration_sec", dur)
 	}
 
 	outputPath := filepath.Join(tempDir, "output.mp4")
@@ -121,6 +128,42 @@ func downloadFile(url, destPath string) error {
 	defer outFile.Close()
 
 	_, err = io.Copy(outFile, resp.Body)
+	return err
+}
+
+func getCachedAudio(url, cachePath, tempPath string) error {
+	if _, err := os.Stat(cachePath); err == nil {
+		slog.Info("Audio found in cache", "path", cachePath)
+		return copyFile(cachePath, tempPath)
+	}
+
+	slog.Info("Audio not in cache, downloading", "url", url)
+
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {
+		return fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	if err := downloadFile(url, cachePath); err != nil {
+		return fmt.Errorf("failed to download audio: %w", err)
+	}
+
+	return copyFile(cachePath, tempPath)
+}
+
+func copyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
 	return err
 }
 

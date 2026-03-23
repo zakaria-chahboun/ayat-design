@@ -28,6 +28,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	if config.AppConfig.Cache.Audio {
+		if err := os.MkdirAll("cache/audio", 0755); err != nil {
+			logger.Error("Failed to create cache/audio folder", "error", err)
+			os.Exit(1)
+		}
+		logger.Info("Audio caching enabled, cache folder ready")
+	}
+
 	if err := quran.LoadQuran("quran.json"); err != nil {
 		logger.Error("Failed to load quran", "error", err)
 		os.Exit(1)

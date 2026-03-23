@@ -1,4 +1,7 @@
 {
+  "cache": {
+    "audio": true
+  },
   "styles": [
     {
       "id": "1",

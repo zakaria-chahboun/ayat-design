@@ -19,9 +19,14 @@ type Reciter struct {
 	Folder string `json:"folder"`
 }
 
+type Cache struct {
+	Audio bool `json:"audio"`
+}
+
 type Config struct {
 	Styles   []Style   `json:"styles"`
 	Reciters []Reciter `json:"reciters"`
+	Cache    Cache     `json:"cache"`
 }
 
 var AppConfig Config
