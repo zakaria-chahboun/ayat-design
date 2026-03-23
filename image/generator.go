@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	_ "image/jpeg"
+	"image/jpeg"
 	_ "image/png"
 	"os"
 	"path/filepath"
@@ -277,9 +277,10 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 
 	// 6. Encode Output
 	buf := new(bytes.Buffer)
-	writerFn := renderers.PNG(canvas.DPMM(1.0))
+	jpegOpts := &jpeg.Options{Quality: 90}
+	writerFn := renderers.JPEG(canvas.DPMM(1.0), jpegOpts)
 	if err := writerFn(buf, c); err != nil {
-		return nil, fmt.Errorf("failed to encode png: %w", err)
+		return nil, fmt.Errorf("failed to encode jpeg: %w", err)
 	}
 
 	return buf.Bytes(), nil
