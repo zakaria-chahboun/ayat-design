@@ -43,8 +43,8 @@ func verseCount(start, end int) int {
 
 func buildOutputMenu() *tele.ReplyMarkup {
 	menu := &tele.ReplyMarkup{}
-	btnText  := menu.Data("📝 نص",    "output_type", "text")
-	btnImage := menu.Data("🖼 صورة",  "output_type", "image")
+	btnText := menu.Data("📝 نص", "output_type", "text")
+	btnImage := menu.Data("🖼 صورة", "output_type", "image")
 	btnVideo := menu.Data("🎬 فيديو", "output_type", "video")
 	menu.Inline(menu.Row(btnText), menu.Row(btnImage), menu.Row(btnVideo))
 	return menu
@@ -54,7 +54,18 @@ func buildStyleMenu() *tele.ReplyMarkup {
 	menu := &tele.ReplyMarkup{}
 	var rows []tele.Row
 	for _, style := range config.AppConfig.Styles {
-		btn := menu.Data(style.Name, "select_style", style.ID)
+		btn := menu.Data(style.Name, "select_image_style", style.ID)
+		rows = append(rows, menu.Row(btn))
+	}
+	menu.Inline(rows...)
+	return menu
+}
+
+func buildVideoStyleMenu() *tele.ReplyMarkup {
+	menu := &tele.ReplyMarkup{}
+	var rows []tele.Row
+	for _, style := range config.AppConfig.Styles {
+		btn := menu.Data(style.Name, "select_video_style", style.ID)
 		rows = append(rows, menu.Row(btn))
 	}
 	menu.Inline(rows...)
@@ -94,7 +105,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		}
 
 		surahNameInput := matches[1]
-		ayahPart       := matches[2]
+		ayahPart := matches[2]
 
 		surahNum, err := quran.GetSurahByName(surahNameInput)
 		if err != nil {
@@ -162,7 +173,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		}
 
 		outputType := c.Callback().Data
-		count       := verseCount(req.StartAyah, req.EndAyah)
+		count := verseCount(req.StartAyah, req.EndAyah)
 
 		switch outputType {
 
@@ -209,7 +220,8 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 				_ = c.Respond()
 				return c.Send(GetImageLimitExceededMessage(config.AppConfig.Limits.ImageVerses))
 			}
-			_ = c.Edit(req.SelectionMsg, buildStyleMenu())
+			prompt := req.SelectionMsg + "\n\n" + GetChooseStyleMessage()
+			_ = c.Edit(prompt, buildStyleMenu())
 			return c.Respond()
 
 		case "video":
@@ -218,15 +230,16 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 				delete(pendingRequests, c.Chat().ID)
 				return c.Respond()
 			}
-			_ = c.Edit(req.SelectionMsg, buildReciterMenu())
+			prompt := req.SelectionMsg + "\n\n" + GetChooseStyleMessage()
+			_ = c.Edit(prompt, buildVideoStyleMenu())
 			return c.Respond()
 		}
 
 		return c.Respond()
 	})
 
-	// Style selected ───────────────────────────────────────────────────────────
-	b.Handle("\fselect_style", func(c tele.Context) error {
+	// Image style selected ────────────────────────────────────────────────────
+	b.Handle("\fselect_image_style", func(c tele.Context) error {
 		req, ok := pendingRequests[c.Chat().ID]
 		if !ok {
 			slog.Warn("Expired request", userAttrs(c)...)
@@ -272,6 +285,22 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			)...,
 		)
 		return c.Respond(&tele.CallbackResponse{Text: GetImageQueuedMessage(queue.ImageQueueLen())})
+	})
+
+	// Video style selected ─────────────────────────────────────────────────────
+	b.Handle("\fselect_video_style", func(c tele.Context) error {
+		req, ok := pendingRequests[c.Chat().ID]
+		if !ok {
+			slog.Warn("Expired request", userAttrs(c)...)
+			return c.Respond(&tele.CallbackResponse{Text: GetExpiredRequestMessage()})
+		}
+
+		req.StyleID = c.Callback().Data
+		pendingRequests[c.Chat().ID] = req
+
+		prompt := req.SelectionMsg + "\n\n" + GetChooseReciterMessage()
+		_ = c.Edit(prompt, buildReciterMenu())
+		return c.Respond()
 	})
 
 	// Reciter selected ─────────────────────────────────────────────────────────

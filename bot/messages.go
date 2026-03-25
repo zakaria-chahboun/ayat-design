@@ -13,8 +13,6 @@ func GetSelectionMessage(surahName string, startAyah, endAyah int) string {
 	return fmt.Sprintf("اخترتم سورة %s، الآيات (%d-%d)", surahName, startAyah, endAyah)
 }
 
-
-
 // ─── Text output ──────────────────────────────────────────────────────────────
 
 // GetTextHeader returns the caption / header sent with a text response.
@@ -34,7 +32,9 @@ func GetTextMessage(surahName string, startAyah, endAyah int, versesText string)
 
 // ─── Image flow ───────────────────────────────────────────────────────────────
 
-
+func GetChooseStyleMessage() string {
+	return "اختر نوع التصميم:"
+}
 
 // GetImageWaitingMessage returns the message edited into the chat while the image renders.
 func GetImageWaitingMessage(selectionMsg string) string {
@@ -47,6 +47,10 @@ func GetImageCaption(surahName string, startAyah, endAyah int) string {
 }
 
 // ─── Video flow ───────────────────────────────────────────────────────────────
+
+func GetChooseReciterMessage() string {
+	return "اختر القارئ المفضل:"
+}
 
 // GetVideoVerseExceededMessage returns the edited message when the user picks
 // more verses than the video limit allows.
@@ -61,8 +65,6 @@ func GetVideoVerseExceededMessage(selectionMsg string, limit int) string {
 func GetVideoWaitingMessage(selectionMsg string) string {
 	return selectionMsg + "\n\nسيتم إعلامكم حالما يجهز المقطع إن شاء الله، يرجى الانتظار 🎬"
 }
-
-
 
 // ─── Validation / error messages ─────────────────────────────────────────────
 
