@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"bytes"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -9,20 +8,25 @@ import (
 	"strings"
 
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
-	"github.com/zakaria-chahboun/AyatDesingBot/image"
+	"github.com/zakaria-chahboun/AyatDesingBot/queue"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
-	"github.com/zakaria-chahboun/AyatDesingBot/video"
 	tele "gopkg.in/telebot.v3"
 )
 
+// RequestData holds the in-progress verse request for a chat session.
 type RequestData struct {
-	SurahNum  int
-	StartAyah int
-	EndAyah   int
-	StyleID   string
+	SurahNum     int
+	SurahName    string
+	StartAyah    int
+	EndAyah      int
+	StyleID      string
+	SelectionMsg string
 }
 
+// pendingRequests maps chat ID → active request awaiting further input.
 var pendingRequests = make(map[int64]RequestData)
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func userAttrs(c tele.Context) []any {
 	u := c.Sender()
@@ -33,13 +37,52 @@ func userAttrs(c tele.Context) []any {
 	}
 }
 
-func RegisterHandlers(b *tele.Bot, _, fontPath string) {
+func verseCount(start, end int) int {
+	return end - start + 1
+}
+
+func buildOutputMenu() *tele.ReplyMarkup {
+	menu := &tele.ReplyMarkup{}
+	btnText  := menu.Data("📝 نص",    "output_type", "text")
+	btnImage := menu.Data("🖼 صورة",  "output_type", "image")
+	btnVideo := menu.Data("🎬 فيديو", "output_type", "video")
+	menu.Inline(menu.Row(btnText), menu.Row(btnImage), menu.Row(btnVideo))
+	return menu
+}
+
+func buildStyleMenu() *tele.ReplyMarkup {
+	menu := &tele.ReplyMarkup{}
+	var rows []tele.Row
+	for _, style := range config.AppConfig.Styles {
+		btn := menu.Data(style.Name, "select_style", style.ID)
+		rows = append(rows, menu.Row(btn))
+	}
+	menu.Inline(rows...)
+	return menu
+}
+
+func buildReciterMenu() *tele.ReplyMarkup {
+	menu := &tele.ReplyMarkup{}
+	var rows []tele.Row
+	for _, reciter := range config.AppConfig.Reciters {
+		btn := menu.Data(reciter.Name, "select_reciter", reciter.ID)
+		rows = append(rows, menu.Row(btn))
+	}
+	menu.Inline(rows...)
+	return menu
+}
+
+// ─── Handler registration ─────────────────────────────────────────────────────
+
+func RegisterHandlers(b *tele.Bot, fontPath string) {
+
+	// /start ──────────────────────────────────────────────────────────────────
 	b.Handle("/start", func(c tele.Context) error {
 		slog.Info("User started bot", userAttrs(c)...)
-		msg := "مرحباً بك في روبوت آيات وأجر 📖\n\nأرسل طلبك بالصيغة التالية:\n[اسم السورة] [رقم الآية أو من-إلى]\n\nمثال:\nالبقرة 2-3\nآل عمران 7"
-		return c.Send(msg)
+		return c.Send(GetStartMessage())
 	})
 
+	// Free text: parse surah + ayah range ─────────────────────────────────────
 	inputRegex := regexp.MustCompile(`^(.+?)\s+(\d+(?:-\d+)?)$`)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
@@ -47,15 +90,15 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 
 		matches := inputRegex.FindStringSubmatch(text)
 		if len(matches) == 0 {
-			return c.Send("⚠️ صيغة غير صحيحة. يرجى استخدام:\n[اسم السورة] [الآية أو من-إلى]\nمثال: البقرة 2-3")
+			return c.Send(GetInvalidFormatMessage())
 		}
 
 		surahNameInput := matches[1]
-		ayahPart := matches[2]
+		ayahPart       := matches[2]
 
 		surahNum, err := quran.GetSurahByName(surahNameInput)
 		if err != nil {
-			return c.Send("⚠️ " + err.Error())
+			return c.Send(GetSurahNotFoundMessage(err))
 		}
 
 		var startAyah, endAyah int
@@ -68,47 +111,34 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 			endAyah = startAyah
 		}
 
+		// Reject if the user already has a job in flight.
+		if !queue.TryAcquire(c.Chat().ID) {
+			return c.Send(GetAlreadyBusyMessage())
+		}
+		// Release immediately — we only needed to check. The real acquire
+		// happens inside queue.Submit* once the user picks an output type.
+		queue.Release(c.Chat().ID)
+
+		// Early validation against the most generous limit (text).
+		count := verseCount(startAyah, endAyah)
+		if count > config.AppConfig.Limits.TextVerses {
+			return c.Send(GetTextLimitExceededMessage(config.AppConfig.Limits.TextVerses))
+		}
+
 		verses, surahName, err := quran.FetchAyat(surahNum, startAyah, endAyah)
 		if err != nil {
-			return c.Send("⚠️ " + err.Error())
+			return c.Send(GetVerseRangeErrorMessage(err))
 		}
 
-		totalChars := 0
-		for _, v := range verses {
-			totalChars += len([]rune(v.Text))
-		}
-
-		warning := ""
-		if totalChars > 600 {
-			warning = "\n\n⚠️ ملاحظة: النص طويل جداً وقد يظهر بخط صغير. يُفضل تقليل عدد الآيات."
-		}
+		selectionMsg := GetSelectionMessage(surahName, startAyah, endAyah)
 
 		pendingRequests[c.Chat().ID] = RequestData{
-			SurahNum:  surahNum,
-			StartAyah: startAyah,
-			EndAyah:   endAyah,
+			SurahNum:     surahNum,
+			SurahName:    surahName,
+			StartAyah:    startAyah,
+			EndAyah:      endAyah,
+			SelectionMsg: selectionMsg,
 		}
-
-		confirmMsg := fmt.Sprintf("اختر تصميم الصورة لسورة %s من الآية %s إلى الآية %s:",
-			surahName,
-			quran.ConvertToArabicIndic(strconv.Itoa(startAyah)),
-			quran.ConvertToArabicIndic(strconv.Itoa(endAyah)))
-
-		if startAyah == endAyah {
-			confirmMsg = fmt.Sprintf("اختر تصميم الصورة لسورة %s الآية %s:",
-				surahName,
-				quran.ConvertToArabicIndic(strconv.Itoa(startAyah)))
-		}
-
-		confirmMsg += warning
-
-		menu := &tele.ReplyMarkup{}
-		var rows []tele.Row
-		for _, style := range config.AppConfig.Styles {
-			btn := menu.Data(style.Name, "select_style", style.ID)
-			rows = append(rows, menu.Row(btn))
-		}
-		menu.Inline(rows...)
 
 		slog.Info("User requested verses",
 			append(userAttrs(c),
@@ -120,193 +150,178 @@ func RegisterHandlers(b *tele.Bot, _, fontPath string) {
 			)...,
 		)
 
-		return c.Send(confirmMsg, menu)
+		return c.Send(selectionMsg, buildOutputMenu())
 	})
 
-	b.Handle("\fselect_style", func(c tele.Context) error {
-		req, ok := pendingRequests[c.Chat().ID]
-		if !ok {
-			slog.Warn("Expired request", userAttrs(c)...)
-			return c.Respond(&tele.CallbackResponse{Text: "انتهت صلاحية الطلب، يرجى إرساله مجدداً."})
-		}
-
-		styleID := c.Callback().Data
-
-		pendingRequests[c.Chat().ID] = RequestData{
-			SurahNum:  req.SurahNum,
-			StartAyah: req.StartAyah,
-			EndAyah:   req.EndAyah,
-			StyleID:   styleID,
-		}
-
-		menu := &tele.ReplyMarkup{}
-		btnImage := menu.Data("🖼 صورة", "output_type", "image")
-		btnVideo := menu.Data("🎬 فيديو", "output_type", "video")
-		menu.Inline(menu.Row(btnImage), menu.Row(btnVideo))
-
-		c.Edit(c.Message().Text+"\n\nاختر نوع المخرجات:", menu)
-
-		return c.Respond()
-	})
-
+	// Output type selected ────────────────────────────────────────────────────
 	b.Handle("\foutput_type", func(c tele.Context) error {
 		req, ok := pendingRequests[c.Chat().ID]
 		if !ok {
 			slog.Warn("Expired request", userAttrs(c)...)
-			return c.Respond(&tele.CallbackResponse{Text: "انتهت صلاحية الطلب، يرجى إرساله مجدداً."})
+			return c.Respond(&tele.CallbackResponse{Text: GetExpiredRequestMessage()})
 		}
 
 		outputType := c.Callback().Data
-		selectedStyle := config.GetStyleByID(req.StyleID)
+		count       := verseCount(req.StartAyah, req.EndAyah)
 
-		if outputType == "image" {
+		switch outputType {
+
+		case "text":
+			if count > config.AppConfig.Limits.TextVerses {
+				_ = c.Edit(req.SelectionMsg)
+				delete(pendingRequests, c.Chat().ID)
+				_ = c.Respond()
+				return c.Send(GetTextLimitExceededMessage(config.AppConfig.Limits.TextVerses))
+			}
+
+			verses, _, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
+			if err != nil {
+				_ = c.Respond()
+				return c.Send(GetVerseRangeErrorMessage(err))
+			}
+
+			waitMsg, err := b.Edit(c.Message(), GetTextWaitingMessage(req.SelectionMsg))
+			if err != nil {
+				_ = c.Respond()
+				return err
+			}
+
 			delete(pendingRequests, c.Chat().ID)
+			_ = c.Respond()
 
-			c.Edit(c.Message().Text + "\n\n⏳ جاري التصميم (" + selectedStyle.Name + ")...")
-
-			slog.Info("User selected image output, generating image",
-				append(userAttrs(c),
-					slog.String("style_id", req.StyleID),
-					slog.String("style_name", selectedStyle.Name),
-					slog.Int("surah_num", req.SurahNum),
-					slog.Int("start_ayah", req.StartAyah),
-					slog.Int("end_ayah", req.EndAyah),
-				)...,
-			)
-
-			verses, surahName, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
-			if err != nil {
-				slog.Error("Failed to fetch verses", append(userAttrs(c), slog.String("error", err.Error()))...)
-				return c.Send("⚠️ خطأ غير متوقع: " + err.Error())
+			if !queue.SubmitText(b, queue.TextJob{
+				ChatID:    c.Chat().ID,
+				MsgID:     waitMsg.ID,
+				SurahNum:  req.SurahNum,
+				SurahName: req.SurahName,
+				StartAyah: req.StartAyah,
+				EndAyah:   req.EndAyah,
+				Verses:    verses,
+			}) {
+				_ = b.Delete(waitMsg)
+				return c.Send(GetQueueFullMessage())
 			}
 
-			imgBytes, err := image.GenerateImage(req.SurahNum, surahName, req.StartAyah, req.EndAyah, verses, selectedStyle, fontPath)
-			if err != nil {
-				slog.Error("Failed to generate image",
-					append(userAttrs(c),
-						slog.String("style", selectedStyle.Name),
-						slog.String("error", err.Error()),
-					)...,
-				)
-				return c.Send("⚠️ حدث خطأ أثناء إنشاء الصورة.")
+		case "image":
+			if count > config.AppConfig.Limits.ImageVerses {
+				_ = c.Edit(req.SelectionMsg)
+				delete(pendingRequests, c.Chat().ID)
+				_ = c.Respond()
+				return c.Send(GetImageLimitExceededMessage(config.AppConfig.Limits.ImageVerses))
 			}
+			_ = c.Edit(req.SelectionMsg, buildStyleMenu())
+			return c.Respond()
 
-			slog.Info("Image generated and sent",
-				append(userAttrs(c),
-					slog.String("surah", surahName),
-					slog.String("style", selectedStyle.Name),
-					slog.Int("image_size_bytes", len(imgBytes)),
-				)...,
-			)
-
-			caption := fmt.Sprintf("سورة %s (%d-%d)", surahName, req.StartAyah, req.EndAyah)
-			photo := &tele.Photo{File: tele.FromReader(bytes.NewReader(imgBytes)), Caption: caption}
-			c.Send(photo)
-
+		case "video":
+			if count > config.AppConfig.Limits.VideoVerses {
+				_ = c.Edit(GetVideoVerseExceededMessage(req.SelectionMsg, config.AppConfig.Limits.VideoVerses))
+				delete(pendingRequests, c.Chat().ID)
+				return c.Respond()
+			}
+			_ = c.Edit(req.SelectionMsg, buildReciterMenu())
 			return c.Respond()
 		}
-
-		verses, _, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
-		if err != nil {
-			return c.Send("⚠️ " + err.Error())
-		}
-
-		if len(verses) > 3 {
-			return c.Send("⚠️ الفيديو يدعم ٣ آيات كحد أقصى. يرجى تقليل عدد الآيات.")
-		}
-
-		menu := &tele.ReplyMarkup{}
-		var rows []tele.Row
-		for _, reciter := range config.AppConfig.Reciters {
-			btn := menu.Data(reciter.Name, "select_reciter", reciter.ID)
-			rows = append(rows, menu.Row(btn))
-		}
-		menu.Inline(rows...)
-
-		c.Edit(c.Message().Text+"\n\nاختر القارئ:", menu)
 
 		return c.Respond()
 	})
 
+	// Style selected ───────────────────────────────────────────────────────────
+	b.Handle("\fselect_style", func(c tele.Context) error {
+		req, ok := pendingRequests[c.Chat().ID]
+		if !ok {
+			slog.Warn("Expired request", userAttrs(c)...)
+			return c.Respond(&tele.CallbackResponse{Text: GetExpiredRequestMessage()})
+		}
+
+		styleID := c.Callback().Data
+
+		verses, _, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
+		if err != nil {
+			_ = c.Respond()
+			return c.Send(GetVerseRangeErrorMessage(err))
+		}
+
+		waitMsg, err := b.Edit(c.Message(), GetImageWaitingMessage(req.SelectionMsg))
+		if err != nil {
+			_ = c.Respond()
+			return err
+		}
+
+		delete(pendingRequests, c.Chat().ID)
+
+		if !queue.SubmitImage(b, queue.ImageJob{
+			ChatID:    c.Chat().ID,
+			MsgID:     waitMsg.ID,
+			SurahNum:  req.SurahNum,
+			SurahName: req.SurahName,
+			StartAyah: req.StartAyah,
+			EndAyah:   req.EndAyah,
+			Verses:    verses,
+			StyleID:   styleID,
+			FontPath:  fontPath,
+		}) {
+			_ = b.Delete(waitMsg)
+			_ = c.Respond()
+			return c.Send(GetQueueFullMessage())
+		}
+
+		slog.Info("Image job queued",
+			append(userAttrs(c),
+				slog.String("style_id", styleID),
+				slog.Int("queue_pos", queue.ImageQueueLen()),
+			)...,
+		)
+		return c.Respond(&tele.CallbackResponse{Text: GetImageQueuedMessage(queue.ImageQueueLen())})
+	})
+
+	// Reciter selected ─────────────────────────────────────────────────────────
 	b.Handle("\fselect_reciter", func(c tele.Context) error {
 		req, ok := pendingRequests[c.Chat().ID]
 		if !ok {
 			slog.Warn("Expired request", userAttrs(c)...)
-			return c.Respond(&tele.CallbackResponse{Text: "انتهت صلاحية الطلب، يرجى إرساله مجدداً."})
+			return c.Respond(&tele.CallbackResponse{Text: GetExpiredRequestMessage()})
 		}
 
 		reciterID := c.Callback().Data
-		selectedReciter := config.GetReciterByID(reciterID)
-		selectedStyle := config.GetStyleByID(req.StyleID)
+
+		verses, _, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
+		if err != nil {
+			_ = c.Respond()
+			return c.Send(GetVerseRangeErrorMessage(err))
+		}
+
+		waitMsg, err := b.Edit(c.Message(), GetVideoWaitingMessage(req.SelectionMsg))
+		if err != nil {
+			_ = c.Respond()
+			return err
+		}
 
 		delete(pendingRequests, c.Chat().ID)
 
-		c.Send("⏳ جاري تحميل التلاوة وإنشاء الفيديو، قد يستغرق ذلك بضع ثوانٍ...")
+		if !queue.SubmitVideo(b, queue.VideoJob{
+			ChatID:    c.Chat().ID,
+			MsgID:     waitMsg.ID,
+			SurahNum:  req.SurahNum,
+			SurahName: req.SurahName,
+			StartAyah: req.StartAyah,
+			EndAyah:   req.EndAyah,
+			Verses:    verses,
+			StyleID:   req.StyleID,
+			ReciterID: reciterID,
+			FontPath:  fontPath,
+			UserID:    c.Sender().ID,
+		}) {
+			_ = b.Delete(waitMsg)
+			_ = c.Respond()
+			return c.Send(GetQueueFullMessage())
+		}
 
-		slog.Info("User selected video output, generating video",
+		slog.Info("Video job queued",
 			append(userAttrs(c),
-				slog.String("style_id", req.StyleID),
 				slog.String("reciter_id", reciterID),
-				slog.String("reciter_name", selectedReciter.Name),
-				slog.Int("surah_num", req.SurahNum),
-				slog.Int("start_ayah", req.StartAyah),
-				slog.Int("end_ayah", req.EndAyah),
+				slog.Int("queue_pos", queue.VideoQueueLen()),
 			)...,
 		)
-
-		if !video.IsFFmpegAvailable() {
-			slog.Error("FFmpeg not available", userAttrs(c)...)
-			return c.Send("⚠️ حدث خطأ أثناء إنشاء الفيديو. يرجى المحاولة لاحقاً.")
-		}
-
-		verses, surahName, err := quran.FetchAyat(req.SurahNum, req.StartAyah, req.EndAyah)
-		if err != nil {
-			slog.Error("Failed to fetch verses", append(userAttrs(c), slog.String("error", err.Error()))...)
-			return c.Send("⚠️ حدث خطأ أثناء إنشاء الفيديو. يرجى المحاولة لاحقاً.")
-		}
-
-		images := make([][]byte, len(verses))
-		for i, v := range verses {
-			verseList := []quran.Verse{v}
-			imgBytes, err := image.GenerateImage(req.SurahNum, surahName, v.ID, v.ID, verseList, selectedStyle, fontPath)
-			if err != nil {
-				slog.Error("Failed to generate image for verse",
-					append(userAttrs(c),
-						slog.Int("verse_id", v.ID),
-						slog.String("error", err.Error()),
-					)...,
-				)
-				return c.Send("⚠️ حدث خطأ أثناء إنشاء الفيديو. يرجى المحاولة لاحقاً.")
-			}
-			images[i] = imgBytes
-		}
-
-		videoBytes, err := video.GenerateVideo(req.SurahNum, verses, images, selectedReciter.Folder, selectedStyle, fontPath, c.Sender().ID)
-		if err != nil {
-			slog.Error("Failed to generate video",
-				append(userAttrs(c),
-					slog.String("error", err.Error()),
-				)...,
-			)
-			return c.Send("⚠️ حدث خطأ أثناء إنشاء الفيديو. يرجى المحاولة لاحقاً.")
-		}
-
-		slog.Info("Video generated and sent",
-			append(userAttrs(c),
-				slog.String("surah", surahName),
-				slog.String("style", selectedStyle.Name),
-				slog.String("reciter", selectedReciter.Name),
-				slog.Int("video_size_bytes", len(videoBytes)),
-			)...,
-		)
-
-		caption := fmt.Sprintf("سورة %s (%d-%d)", surahName, req.StartAyah, req.EndAyah)
-		videoMsg := &tele.Video{
-			File:    tele.FromReader(bytes.NewReader(videoBytes)),
-			Caption: caption,
-		}
-		c.Send(videoMsg)
-
-		return c.Respond()
+		return c.Respond(&tele.CallbackResponse{Text: GetVideoQueuedMessage(queue.VideoQueueLen())})
 	})
 }
