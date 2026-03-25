@@ -2,6 +2,19 @@
   "cache": {
     "audio": true
   },
+  "queue": {
+    "text_workers": 5,
+    "image_workers": 3,
+    "video_workers": 1,
+    "text_queue_size": 200,
+    "image_queue_size": 20,
+    "video_queue_size": 5
+  },
+  "limits": {
+    "text_verses": 30,
+    "image_verses": 10,
+    "video_verses": 3
+  },
   "styles": [
     {
       "id": "1",

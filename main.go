@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/zakaria-chahboun/AyatDesingBot/bot"
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
+	"github.com/zakaria-chahboun/AyatDesingBot/queue"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 	"github.com/zakaria-chahboun/AyatDesingBot/video"
 	"github.com/zakaria-chahboun/AyatDesingBot/web"
@@ -82,8 +83,14 @@ func main() {
 
 	os.MkdirAll("backgrounds", 0755)
 
+	// Init queue channels, result channel, and worker pools.
+	cfg := config.AppConfig
+	queue.Init(cfg.Queue.TextQueueSize, cfg.Queue.ImageQueueSize, cfg.Queue.VideoQueueSize)
+	queue.InitResults(cfg.Queue.TextQueueSize + cfg.Queue.ImageQueueSize + cfg.Queue.VideoQueueSize)
+	queue.StartWorkers(queue.Results, cfg.Queue.ImageWorkers, cfg.Queue.VideoWorkers, cfg.Queue.TextWorkers)
+
 	logger.Info("Bot is starting...")
-	bot.RegisterHandlers(b, "backgrounds", "fonts/Nabi.ttf")
+	bot.RegisterHandlers(b, "fonts/Nabi.ttf")
 
 	b.Start()
 }

@@ -23,10 +23,28 @@ type Cache struct {
 	Audio bool `json:"audio"`
 }
 
+type Queue struct {
+	TextWorkers    int `json:"text_workers"`
+	ImageWorkers   int `json:"image_workers"`
+	VideoWorkers   int `json:"video_workers"`
+	TextQueueSize  int `json:"text_queue_size"`
+	ImageQueueSize int `json:"image_queue_size"`
+	VideoQueueSize int `json:"video_queue_size"`
+}
+
+// Limits defines the maximum number of verses allowed per output type.
+type Limits struct {
+	TextVerses  int `json:"text_verses"`
+	ImageVerses int `json:"image_verses"`
+	VideoVerses int `json:"video_verses"`
+}
+
 type Config struct {
 	Styles   []Style   `json:"styles"`
 	Reciters []Reciter `json:"reciters"`
 	Cache    Cache     `json:"cache"`
+	Queue    Queue     `json:"queue"`
+	Limits   Limits    `json:"limits"`
 }
 
 var AppConfig Config
@@ -41,6 +59,38 @@ func Load(path string) error {
 		return err
 	}
 	BotToken = os.Getenv("BOT_TOKEN")
+
+	// Queue defaults
+	if AppConfig.Queue.TextWorkers <= 0 {
+		AppConfig.Queue.TextWorkers = 5
+	}
+	if AppConfig.Queue.ImageWorkers <= 0 {
+		AppConfig.Queue.ImageWorkers = 3
+	}
+	if AppConfig.Queue.VideoWorkers <= 0 {
+		AppConfig.Queue.VideoWorkers = 1
+	}
+	if AppConfig.Queue.TextQueueSize <= 0 {
+		AppConfig.Queue.TextQueueSize = 200
+	}
+	if AppConfig.Queue.ImageQueueSize <= 0 {
+		AppConfig.Queue.ImageQueueSize = 20
+	}
+	if AppConfig.Queue.VideoQueueSize <= 0 {
+		AppConfig.Queue.VideoQueueSize = 5
+	}
+
+	// Limits defaults
+	if AppConfig.Limits.TextVerses <= 0 {
+		AppConfig.Limits.TextVerses = 30
+	}
+	if AppConfig.Limits.ImageVerses <= 0 {
+		AppConfig.Limits.ImageVerses = 10
+	}
+	if AppConfig.Limits.VideoVerses <= 0 {
+		AppConfig.Limits.VideoVerses = 3
+	}
+
 	return nil
 }
 
