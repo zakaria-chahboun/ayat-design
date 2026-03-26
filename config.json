@@ -27,7 +27,7 @@
       "id": "2",
       "name": "أصفر",
       "background_image": "backgrounds/yellow.jpg",
-      "blur_value": 6.5,
+      "blur_value": 8.0,
       "text_color": "white",
       "isNew": true
     },
@@ -70,7 +70,7 @@
     },
     {
       "id": "9",
-      "name": "بحر",
+      "name": "بحري",
       "background_image": "backgrounds/sea.jpg",
       "blur_value": 8.0,
       "text_color": "white",
@@ -102,6 +102,12 @@
       "id": "ghamadi",
       "name": "سعد الغامدي",
       "folder": "Ghamadi_40kbps",
+      "isNew": true
+    },
+    {
+      "id": "yassin_al_jazaery",
+      "name": "ياسين الجزائري (ورش)",
+      "folder": "warsh/warsh_yassin_al_jazaery_64kbps",
       "isNew": true
     }
   ]
