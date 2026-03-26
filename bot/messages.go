@@ -70,7 +70,7 @@ func GetVideoWaitingMessage(selectionMsg string) string {
 
 // GetInvalidFormatMessage is sent when the user's input doesn't match the expected pattern.
 func GetInvalidFormatMessage() string {
-	return "⚠️ صيغة غير صحيحة. يرجى استخدام:\n[اسم السورة] [الآية أو من-إلى]\n\nمثال: البقرة 2-3"
+	return "⚠️ صيغة غير صحيحة. يرجى استخدام:\n[اسم السورة] [الآية أو من-إلى]\n\nمثال:\nالبقرة 2-3\nالفاتحة ١-٣"
 }
 
 // GetSurahNotFoundMessage wraps the error returned by the surah lookup.
@@ -135,5 +135,7 @@ func GetStartMessage() string {
 		"[اسم السورة] [رقم الآية أو من-إلى]\n\n" +
 		"مثال:\n" +
 		"البقرة 2-3\n" +
-		"آل عمران 7"
+		"آل عمران 7\n" +
+		"الفاتحة ١-٣\n" +
+		"يوسف ٤"
 }
