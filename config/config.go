@@ -122,5 +122,5 @@ func IsBypassKeyword(word string) bool {
 	if word == "" {
 		return false
 	}
-	return os.Getenv("BYPASS_VIDEO_KEYWORD") == word
+	return os.Getenv("BYPASS_KEYWORD") == word
 }

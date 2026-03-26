@@ -199,7 +199,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		switch outputType {
 
 		case "text":
-			if count > config.AppConfig.Limits.TextVerses {
+			if count > config.AppConfig.Limits.TextVerses && !req.Bypass {
 				_ = c.Edit(req.SelectionMsg)
 				delete(pendingRequests, c.Chat().ID)
 				_ = c.Respond()
@@ -235,7 +235,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			}
 
 		case "image":
-			if count > config.AppConfig.Limits.ImageVerses {
+			if count > config.AppConfig.Limits.ImageVerses && !req.Bypass {
 				_ = c.Edit(req.SelectionMsg)
 				delete(pendingRequests, c.Chat().ID)
 				_ = c.Respond()
