@@ -9,6 +9,8 @@ import (
 	tele "gopkg.in/telebot.v3"
 )
 
+const telegramCharLimit = 4000
+
 // Results is the shared channel workers push finished jobs into.
 var Results chan JobResult
 
@@ -124,28 +126,59 @@ func waitAndDeliver(b *tele.Bot, chatID int64, resultCh <-chan JobResult) {
 			slog.String("type", string(result.Type)),
 			slog.String("err", result.Err.Error()),
 		)
-		_, _ = b.Send(chat, "⚠️ "+result.Err.Error())
+		if _, err := b.Send(chat, "⚠️ "+result.Err.Error()); err != nil {
+			slog.Error("Error msg send failed", slog.String("err", err.Error()))
+		}
 		return
 	}
 
 	switch result.Type {
 	case JobTypeText:
-		msg := fmt.Sprintf("%s\n\n```\n%s\n```", escapeMarkdownV2(caption), result.Text)
-		_, _ = b.Send(chat, msg, tele.ModeMarkdownV2)
+		escapedCaption := escapeMarkdownV2(caption)
+		textLen := len(escapedCaption) + 10 + len(result.Text)
+
+		if textLen <= telegramCharLimit {
+			msg := fmt.Sprintf("%s\n\n```\n%s\n```", escapedCaption, result.Text)
+			if _, err := b.Send(chat, msg, tele.ModeMarkdownV2); err != nil {
+				slog.Error("Text send failed", slog.String("err", err.Error()))
+			}
+		} else {
+			verses := strings.Split(result.Text, "\n")
+			chunks := splitVersesByLimit(verses, telegramCharLimit-20)
+
+			for i, chunk := range chunks {
+				if len(chunks) > 1 {
+					header := ""
+					if i == 0 {
+						header = fmt.Sprintf("%s\n(%d/%d)\n\n", caption, i+1, len(chunks))
+					} else {
+						header = fmt.Sprintf("(%d/%d)\n\n", i+1, len(chunks))
+					}
+					msg := fmt.Sprintf("%s```\n%s\n```", header, chunk)
+					if _, err := b.Send(chat, msg, tele.ModeMarkdown); err != nil {
+						slog.Error("Chunk send failed", slog.String("err", err.Error()))
+					}
+				}
+			}
+		}
 
 	case JobTypeImage:
 		photo := &tele.Photo{
 			File:    tele.FromReader(bytes.NewReader(result.FileBytes)),
 			Caption: caption,
 		}
-		_, _ = b.Send(chat, photo)
+		if _, err := b.Send(chat, photo); err != nil {
+			slog.Error("Image send failed", slog.String("err", err.Error()))
+		}
 
 	case JobTypeVideo:
 		video := &tele.Video{
 			File:    tele.FromReader(bytes.NewReader(result.FileBytes)),
 			Caption: caption,
 		}
-		_, _ = b.Send(chat, video)
+		if _, err := b.Send(chat, video); err != nil {
+			slog.Error("Video send failed", slog.String("err", err.Error()))
+		}
 	}
 
 	slog.Info("Job delivered",
@@ -186,4 +219,25 @@ var mdV2Replacer = strings.NewReplacer(
 
 func escapeMarkdownV2(s string) string {
 	return mdV2Replacer.Replace(s)
+}
+
+func splitVersesByLimit(verses []string, limit int) []string {
+	var parts []string
+	var current strings.Builder
+
+	for _, verse := range verses {
+		if current.Len()+len(verse)+1 > limit && current.Len() > 0 {
+			parts = append(parts, current.String())
+			current.Reset()
+		}
+		if current.Len() > 0 {
+			current.WriteString("\n")
+		}
+		current.WriteString(verse)
+	}
+
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+	return parts
 }
