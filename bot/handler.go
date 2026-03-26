@@ -141,6 +141,10 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		}
 
 		isBypass := config.IsBypassKeyword(bypassKeyword)
+		// Check if bypass is detected
+		if isBypass {
+			slog.Info("Bypass keyword detected", userAttrs(c)...)
+		}
 
 		// Reject if the user already has a job in flight.
 		if !queue.TryAcquire(c.Chat().ID) {
@@ -152,7 +156,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 
 		// Early validation against the most generous limit (text).
 		count := verseCount(startAyah, endAyah)
-		if count > config.AppConfig.Limits.TextVerses {
+		if count > config.AppConfig.Limits.TextVerses && !isBypass {
 			return c.Send(GetTextLimitExceededMessage(config.AppConfig.Limits.TextVerses))
 		}
 

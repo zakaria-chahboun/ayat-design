@@ -46,6 +46,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if bypassKeyword := os.Getenv("BYPASS_KEYWORD"); bypassKeyword != "" {
+		logger.Info("Bypass keyword is set in the environment")
+	}
+
 	if config.AppConfig.Cache.Audio {
 		if err := os.MkdirAll("cache/audio", 0755); err != nil {
 			logger.Error("Failed to create cache/audio folder", "error", err)
