@@ -42,6 +42,22 @@ func verseCount(start, end int) int {
 	return end - start + 1
 }
 
+func normalizeNumerals(s string) string {
+	arabicToEnglish := map[rune]rune{
+		'٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+		'٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+	}
+	var result strings.Builder
+	for _, r := range s {
+		if val, ok := arabicToEnglish[r]; ok {
+			result.WriteRune(val)
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
 func buildOutputMenu() *tele.ReplyMarkup {
 	menu := &tele.ReplyMarkup{}
 	btnText := menu.Data("📝 نص", "output_type", "text")
@@ -95,7 +111,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 	})
 
 	// Free text: parse surah + ayah range + bypass keyword (optional) ───────────────────────────────
-	inputRegex := regexp.MustCompile(`^(.+?)\s+(\d+(?:-\d+)?)(?:\s+(\S+))?$`)
+	inputRegex := regexp.MustCompile(`^(.+?)\s+([\d٠-٩]+(?:-[\d٠-٩]+)?)(?:\s+(\S+))?$`)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
 		text := strings.TrimSpace(c.Text())
@@ -106,7 +122,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		}
 
 		surahNameInput := matches[1]
-		ayahPart := matches[2]
+		ayahPart := normalizeNumerals(matches[2])
 		bypassKeyword := matches[3]
 
 		surahNum, err := quran.GetSurahByName(surahNameInput)
