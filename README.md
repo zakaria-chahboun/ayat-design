@@ -79,6 +79,19 @@ Define background images and text colors for verse designs.
 ### Reciters
 Configure Quran reciters. Audio is fetched from [everyayah.com](https://everyayah.com/data/).
 
+### Bypass Video Limit
+Set `BYPASS_VIDEO_KEYWORD` environment variable to enable bypassing the video verse limit (default 3).
+When a user includes this keyword in their request the verse limit is bypassed, example:
+
+```
+BYPASS_VIDEO_KEYWORD=مميز
+```
+
+Then the prompt will be like:
+```
+النور 1-7 مميز
+```
+
 
 ## Creator
 تم بفضل الله وبحمده وتيسيره
