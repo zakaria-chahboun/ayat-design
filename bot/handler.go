@@ -21,6 +21,7 @@ type RequestData struct {
 	EndAyah      int
 	StyleID      string
 	SelectionMsg string
+	Bypass       bool
 }
 
 // pendingRequests maps chat ID → active request awaiting further input.
@@ -93,8 +94,8 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		return c.Send(GetStartMessage())
 	})
 
-	// Free text: parse surah + ayah range ─────────────────────────────────────
-	inputRegex := regexp.MustCompile(`^(.+?)\s+(\d+(?:-\d+)?)$`)
+	// Free text: parse surah + ayah range + bypass keyword (optional) ───────────────────────────────
+	inputRegex := regexp.MustCompile(`^(.+?)\s+(\d+(?:-\d+)?)(?:\s+(\S+))?$`)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
 		text := strings.TrimSpace(c.Text())
@@ -106,6 +107,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 
 		surahNameInput := matches[1]
 		ayahPart := matches[2]
+		bypassKeyword := matches[3]
 
 		surahNum, err := quran.GetSurahByName(surahNameInput)
 		if err != nil {
@@ -121,6 +123,8 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			startAyah, _ = strconv.Atoi(ayahPart)
 			endAyah = startAyah
 		}
+
+		isBypass := config.IsBypassKeyword(bypassKeyword)
 
 		// Reject if the user already has a job in flight.
 		if !queue.TryAcquire(c.Chat().ID) {
@@ -149,6 +153,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			StartAyah:    startAyah,
 			EndAyah:      endAyah,
 			SelectionMsg: selectionMsg,
+			Bypass:       isBypass,
 		}
 
 		slog.Info("User requested verses",
@@ -225,7 +230,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			return c.Respond()
 
 		case "video":
-			if count > config.AppConfig.Limits.VideoVerses {
+			if count > config.AppConfig.Limits.VideoVerses && !req.Bypass {
 				_ = c.Edit(GetVideoVerseExceededMessage(req.SelectionMsg, config.AppConfig.Limits.VideoVerses))
 				delete(pendingRequests, c.Chat().ID)
 				return c.Respond()
@@ -339,6 +344,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			ReciterID: reciterID,
 			FontPath:  fontPath,
 			UserID:    c.Sender().ID,
+			Bypass:    req.Bypass,
 		}) {
 			_ = b.Delete(waitMsg)
 			_ = c.Respond()

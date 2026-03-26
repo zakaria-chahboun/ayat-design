@@ -42,6 +42,7 @@ type VideoJob struct {
 	ReciterID string
 	FontPath  string
 	UserID    int64
+	Bypass    bool
 }
 
 // ─── Job result ───────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ var (
 
 // Init creates the buffered channels. Call once at startup with sizes from config.
 func Init(textSize, imageSize, videoSize int) {
-	TextCh  = make(chan TextJob,  textSize)
+	TextCh = make(chan TextJob, textSize)
 	ImageCh = make(chan ImageJob, imageSize)
 	VideoCh = make(chan VideoJob, videoSize)
 }
@@ -138,6 +139,6 @@ func EnqueueVideo(job VideoJob) bool {
 
 // ─── Queue length helpers ─────────────────────────────────────────────────────
 
-func TextQueueLen()  int { return len(TextCh) }
+func TextQueueLen() int  { return len(TextCh) }
 func ImageQueueLen() int { return len(ImageCh) }
 func VideoQueueLen() int { return len(VideoCh) }

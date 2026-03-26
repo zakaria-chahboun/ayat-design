@@ -34,8 +34,9 @@ func GenerateVideo(
 	style config.Style,
 	fontPath string,
 	userID int64,
+	bypass bool,
 ) ([]byte, error) {
-	if len(verses) > 3 {
+	if len(verses) > 3 && !bypass {
 		return nil, fmt.Errorf("الحد الأقصى للآيات في الفيديو هو ٣ آيات")
 	}
 

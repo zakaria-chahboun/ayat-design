@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	imageGen "github.com/zakaria-chahboun/AyatDesingBot/image"
 	videoGen "github.com/zakaria-chahboun/AyatDesingBot/video"
-	"github.com/zakaria-chahboun/AyatDesingBot/config"
 )
 
 // StartWorkers launches all worker pools. Call once at startup.
@@ -88,8 +88,8 @@ func videoWorker(results chan<- JobResult) {
 	for job := range VideoCh {
 		slog.Info("Video job started", slog.Int64("chat_id", job.ChatID))
 
-		style    := config.GetStyleByID(job.StyleID)
-		reciter  := config.GetReciterByID(job.ReciterID)
+		style := config.GetStyleByID(job.StyleID)
+		reciter := config.GetReciterByID(job.ReciterID)
 
 		// Generate one image frame per verse.
 		var images [][]byte
@@ -120,6 +120,7 @@ func videoWorker(results chan<- JobResult) {
 				style,
 				job.FontPath,
 				job.UserID,
+				job.Bypass,
 			)
 		}
 
