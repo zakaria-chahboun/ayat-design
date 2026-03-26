@@ -1,9 +1,10 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -12,14 +13,11 @@ import (
 	"github.com/zakaria-chahboun/AyatDesingBot/queue"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 	"github.com/zakaria-chahboun/AyatDesingBot/video"
-	"github.com/zakaria-chahboun/AyatDesingBot/web"
+	"github.com/zakaria-chahboun/cute"
 	tele "gopkg.in/telebot.v3"
 )
 
 func main() {
-	serveWeb := flag.Bool("web", false, "Serve web landing page")
-	flag.Parse()
-
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
@@ -29,49 +27,43 @@ func main() {
 		logger.Warn("No .env file found, relying on environment variables")
 	}
 
-	if *serveWeb {
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-		}
-		logger.Info("Starting web server", "port", port)
-		if err := web.Run(port); err != nil {
-			logger.Error("Web server error", "error", err)
-		}
-		return
-	}
-
 	if err := config.Load("config.json"); err != nil {
-		logger.Error("Failed to load config", "error", err)
-		os.Exit(1)
+		cute.Check("Config Error", err)
 	}
 
-	if bypassKeyword := os.Getenv("BYPASS_KEYWORD"); bypassKeyword != "" {
-		logger.Info("Bypass keyword is set in the environment")
+	list := cute.NewList(cute.BrightYellow, "🪏 Config")
+	list.Add(cute.DefaultColor, "Image Workers: "+strconv.Itoa(config.AppConfig.Queue.ImageWorkers))
+	list.Add(cute.DefaultColor, "Video Workers: "+strconv.Itoa(config.AppConfig.Queue.VideoWorkers))
+	list.Add(cute.DefaultColor, "Text Workers: "+strconv.Itoa(config.AppConfig.Queue.TextWorkers))
+	list.Add(cute.DefaultColor, "Text Limit: "+strconv.Itoa(config.AppConfig.Limits.TextVerses))
+	list.Add(cute.DefaultColor, "Image Limit: "+strconv.Itoa(config.AppConfig.Limits.ImageVerses))
+	list.Add(cute.DefaultColor, "Video Limit: "+strconv.Itoa(config.AppConfig.Limits.VideoVerses))
+
+	if bypass := os.Getenv("BYPASS_KEYWORD"); bypass != "" {
+		list.Add(cute.BrightGreen, "✓ Bypass Keyword: set")
 	}
 
 	if config.AppConfig.Cache.Audio {
+		list.Add(cute.BrightGreen, "✓ Audio Cache: enabled")
 		if err := os.MkdirAll("cache/audio", 0755); err != nil {
-			logger.Error("Failed to create cache/audio folder", "error", err)
-			os.Exit(1)
+			cute.Check("Cache Error", err)
 		}
-		logger.Info("Audio caching enabled, cache folder ready")
+	}
+
+	list.Print()
+
+	if video.CheckFFmpeg() {
+		cute.Println("✅ FFmpeg", "Video generation enabled")
+	} else {
+		cute.Println("⚠️  FFmpeg", "Not found, video generation disabled")
 	}
 
 	if err := quran.LoadQuran("quran.json"); err != nil {
-		logger.Error("Failed to load quran", "error", err)
-		os.Exit(1)
+		cute.Check("Quran Error", err)
 	}
 
 	if config.BotToken == "" {
-		logger.Error("BOT_TOKEN environment variable is required")
-		os.Exit(1)
-	}
-
-	if video.CheckFFmpeg() {
-		logger.Info("FFmpeg is available, video generation enabled")
-	} else {
-		logger.Warn("FFmpeg not found, video generation is disabled")
+		cute.Check("Config Error", fmt.Errorf("BOT_TOKEN environment variable is required"))
 	}
 
 	pref := tele.Settings{
@@ -81,13 +73,11 @@ func main() {
 
 	b, err := tele.NewBot(pref)
 	if err != nil {
-		logger.Error("Failed to create bot", "error", err)
-		os.Exit(1)
+		cute.Check("Bot Error", err)
 	}
 
 	os.MkdirAll("backgrounds", 0755)
 
-	// Init queue channels, result channel, and worker pools.
 	cfg := config.AppConfig
 	queue.Init(cfg.Queue.TextQueueSize, cfg.Queue.ImageQueueSize, cfg.Queue.VideoQueueSize)
 	queue.InitResults(cfg.Queue.TextQueueSize + cfg.Queue.ImageQueueSize + cfg.Queue.VideoQueueSize)

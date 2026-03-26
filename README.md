@@ -28,7 +28,7 @@ https://t.me/AyatDesignBot
 4. Choose output type (text or image or video)
 5. For video, choose a reciter
 
-You can use English numerals (123) or Hindi numerals (١٢٣).
+You can use Arabic numerals (123) or Hindi numerals (١٢٣).
 
 Examples:
 ```

@@ -4,7 +4,9 @@ go 1.25.7
 
 require (
 	github.com/disintegration/imaging v1.6.2
+	github.com/joho/godotenv v1.5.1
 	github.com/tdewolff/canvas v0.0.0-20260306132702-8921d53f210f
+	github.com/zakaria-chahboun/cute v1.2.0
 	gopkg.in/telebot.v3 v3.3.8
 )
 
@@ -17,15 +19,12 @@ require (
 	github.com/BurntSushi/xgbutil v0.0.0-20190907113008-ad855c713046 // indirect
 	github.com/ByteArena/poly2tri-go v0.0.0-20170716161910-d102ad91854f // indirect
 	github.com/Kagami/go-avif v0.1.0 // indirect
-	github.com/a-h/templ v0.3.1001 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/benoitkugler/textlayout v0.3.1 // indirect
 	github.com/benoitkugler/textprocessing v0.0.3 // indirect
-	github.com/go-chi/chi/v5 v5.2.5 // indirect
 	github.com/go-fonts/latin-modern v0.3.3 // indirect
 	github.com/go-text/typesetting v0.3.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kolesa-team/go-webp v1.0.5 // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/srwiley/scanx v0.0.0-20190309010443-e94503791388 // indirect
