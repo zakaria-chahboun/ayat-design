@@ -25,14 +25,19 @@ https://t.me/AyatDesignBot
 1. Open the bot
 2. Send your request in this format: `[Surah Name] [Verse or From-To]`
 3. Choose a design style
-4. Choose output type (image or video)
+4. Choose output type (text or image or video)
 5. For video, choose a reciter
+
+You can use English numerals (123) or Hindi numerals (١٢٣).
 
 Examples:
 ```
 البقرة 1
 الفاتحة 1-3
 يوسف 4-6
+البقرة ١
+الفاتحة ١-٣
+يوسف ٤-٦
 ```
 
 ## Examples
