@@ -71,7 +71,11 @@ func buildStyleMenu() *tele.ReplyMarkup {
 	menu := &tele.ReplyMarkup{}
 	var rows []tele.Row
 	for _, style := range config.AppConfig.Styles {
-		btn := menu.Data(style.Name, "select_image_style", style.ID)
+		name := style.Name
+		if style.IsNew {
+			name += " ✨"
+		}
+		btn := menu.Data(name, "select_image_style", style.ID)
 		rows = append(rows, menu.Row(btn))
 	}
 	menu.Inline(rows...)
@@ -82,7 +86,11 @@ func buildVideoStyleMenu() *tele.ReplyMarkup {
 	menu := &tele.ReplyMarkup{}
 	var rows []tele.Row
 	for _, style := range config.AppConfig.Styles {
-		btn := menu.Data(style.Name, "select_video_style", style.ID)
+		name := style.Name
+		if style.IsNew {
+			name += " ✨"
+		}
+		btn := menu.Data(name, "select_video_style", style.ID)
 		rows = append(rows, menu.Row(btn))
 	}
 	menu.Inline(rows...)
@@ -93,7 +101,11 @@ func buildReciterMenu() *tele.ReplyMarkup {
 	menu := &tele.ReplyMarkup{}
 	var rows []tele.Row
 	for _, reciter := range config.AppConfig.Reciters {
-		btn := menu.Data(reciter.Name, "select_reciter", reciter.ID)
+		name := reciter.Name
+		if reciter.IsNew {
+			name += " ✨"
+		}
+		btn := menu.Data(name, "select_reciter", reciter.ID)
 		rows = append(rows, menu.Row(btn))
 	}
 	menu.Inline(rows...)

@@ -11,12 +11,14 @@ type Style struct {
 	BackgroundImage string  `json:"background_image"`
 	BlurValue       float64 `json:"blur_value"`
 	TextColor       string  `json:"text_color"`
+	IsNew           bool    `json:"isNew"`
 }
 
 type Reciter struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Folder string `json:"folder"`
+	IsNew  bool   `json:"isNew"`
 }
 
 type Cache struct {

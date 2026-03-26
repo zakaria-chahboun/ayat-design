@@ -25,10 +25,11 @@
     },
     {
       "id": "2",
-      "name": "أنثوي",
-      "background_image": "backgrounds/female.jpg",
-      "blur_value": 4.0,
-      "text_color": "white"
+      "name": "أصفر",
+      "background_image": "backgrounds/yellow.jpg",
+      "blur_value": 6.5,
+      "text_color": "white",
+      "isNew": true
     },
     {
       "id": "3",
@@ -39,9 +40,9 @@
     },
     {
       "id": "5",
-      "name": "زهور",
+      "name": "وردة",
       "background_image": "backgrounds/flower.jpg",
-      "blur_value": 8.0,
+      "blur_value": 5.0,
       "text_color": "white"
     },
     {
@@ -50,6 +51,30 @@
       "background_image": "backgrounds/green.jpg",
       "blur_value": 3.0,
       "text_color": "white"
+    },
+    {
+      "id": "7",
+      "name": "بني",
+      "background_image": "backgrounds/brown.jpg",
+      "blur_value": 6.0,
+      "text_color": "white",
+      "isNew": true
+    },
+    {
+      "id": "8",
+      "name": "زهري",
+      "background_image": "backgrounds/pink.jpg",
+      "blur_value": 3.0,
+      "text_color": "black",
+      "isNew": true
+    },
+    {
+      "id": "9",
+      "name": "بحر",
+      "background_image": "backgrounds/sea.jpg",
+      "blur_value": 8.0,
+      "text_color": "white",
+      "isNew": true
     }
   ],
   "reciters": [
@@ -72,6 +97,12 @@
       "id": "husary",
       "name": "الحصري",
       "folder": "Husary_128kbps"
+    },
+    {
+      "id": "ghamadi",
+      "name": "سعد الغامدي",
+      "folder": "Ghamadi_40kbps",
+      "isNew": true
     }
   ]
 }
