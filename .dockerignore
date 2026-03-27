@@ -1,9 +1,0 @@
-.git/
-.gitignore
-.env
-*.md
-LICENSE
-.DS_Store
-cache/
-
-main
