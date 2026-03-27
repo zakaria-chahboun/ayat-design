@@ -4,14 +4,14 @@
   },
   "queue": {
     "text_workers": 5,
-    "image_workers": 3,
-    "video_workers": 1,
+    "image_workers": 5,
+    "video_workers": 3,
     "text_queue_size": 200,
-    "image_queue_size": 20,
-    "video_queue_size": 5
+    "image_queue_size": 30,
+    "video_queue_size": 8
   },
   "limits": {
-    "text_verses": 30,
+    "text_verses": 50,
     "image_verses": 10,
     "video_verses": 3
   },
