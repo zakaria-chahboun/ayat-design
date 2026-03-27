@@ -8,15 +8,15 @@
 	<meta name="keywords" content="آيات, قرآن, تصميم, صور قرآنية, فيديوهات قرآنية, تلاوات, Ayat Design, Quran Design"/>
 	<meta name="author" content="زكرياء شهبون - zakaria chahboun"/>
 	<meta name="robots" content="index, follow"/>
-	<link rel="canonical" href="https://t.me/AyatDesignBot"/>
-	<link rel="icon" type="image/png" href="static/logo.png"/>
+	<link rel="canonical" href="https://ayat.zakariachahboun.com"/>
+	<link rel="icon" type="image/png" href="static/logo_white.png"/>
 	
 	<!-- Open Graph -->
 	<meta property="og:title" content="آيات وأجر - Ayat Design"/>
 	<meta property="og:description" content="صمم آيات من الذكر الحكيم وشاركها مع غيرك لتكسب الأجر والثواب"/>
 	<meta property="og:type" content="website"/>
-	<meta property="og:url" content="https://t.me/AyatDesignBot"/>
-	<meta property="og:image" content="static/logo.png"/>
+	<meta property="og:url" content="https://ayat.zakariachahboun.com"/>
+	<meta property="og:image" content="static/hero.png"/>
 	<meta property="og:image:width" content="512"/>
 	<meta property="og:image:height" content="512"/>
 	<meta property="og:locale" content="ar_AR"/>
@@ -28,7 +28,7 @@
 	<meta name="twitter:creator" content="@zaki_chahboun"/>
 	<meta name="twitter:title" content="آيات وأجر - Ayat Design"/>
 	<meta name="twitter:description" content="صمم آيات من الذكر الحكيم وشاركها مع غيرك لتكسب الأجر والثواب"/>
-	<meta name="twitter:image" content="static/logo.png"/>
+	<meta name="twitter:image" content="static/hero.png"/>
 	
 	<!-- Fonts -->
 	<link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -37,22 +37,61 @@
 	
 	<!-- Styles -->
 	<link rel="stylesheet" href="static/style.css"/>
+	
+	<!-- Structured Data -->
+	<script type="application/ld+json">
+	{
+		"@context": "https://schema.org",
+		"@type": "SoftwareApplication",
+		"name": "آيات وأجر - Ayat Design",
+		"description": "صمم آيات من الذكر الحكيم وشاركها مع غيرك لتكسب الأجر والثواب",
+		"url": "https://ayat.zakariachahboun.com",
+		"applicationCategory": "DesignApplication",
+		"operatingSystem": "Telegram",
+		"offers": {
+			"@type": "Offer",
+			"price": "0",
+			"priceCurrency": "USD"
+		},
+		"author": {
+			"@type": "Person",
+			"name": "زكرياء شهبون",
+			"url": "https://github.com/zakaria-chahboun"
+		},
+		"discussionUrl": "https://t.me/AyatDesignBot"
+	}
+	</script>
+	<script type="application/ld+json">
+	{
+		"@context": "https://schema.org",
+		"@type": "SoftwareApplication",
+		"applicationCategory": "MessagingApplication",
+		"name": "Ayat Design Bot",
+		"description": "Telegram bot for designing Quran verses and sharing them",
+		"url": "https://t.me/AyatDesignBot",
+		"sameAs": [
+			"https://t.me/AyatDesignBot",
+			"https://x.com/zaki_chahboun",
+			"https://github.com/zakaria-chahboun/ayat-design"
+		]
+	}
+	</script>
 </head>
 <body>
 	<div class="noise"></div>
 	<main>
 		<header class="hero">
-			<div class="logo">
-				<img src="static/logo.png" alt="آيات وأجر" class="logo-img"/>
-				<h1>آيات وأجر</h1>
+			<div class="hero-image">
+				<img src="static/hero.png" alt="آيات وأجر"/>
 			</div>
+			<h1>آيات وأجر</h1>
 			<p class="tagline">صمم آيات من الذكر الحكيم<br/>وشاركها مع غيرك لتكسب الأجر والثواب</p>
 			<div class="cta">
 				<a href="https://t.me/AyatDesignBot" class="btn primary" target="_blank">
-					<span>ابدأ الآن</span>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M4 12h16M12 4l8 8-8 8"/>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
 					</svg>
+					<span>ابدأ الآن</span>
 				</a>
 				<a href="https://github.com/zakaria-chahboun/ayat-design" class="btn secondary" target="_blank">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -110,16 +149,21 @@
 		</section>
 
 		<footer class="footer">
-			<p>
-				صُنع بـ ❤️ بواسطة 
-				<a href="https://github.com/zakaria-chahboun" target="_blank">زكرياء شهبون</a>
-			</p>
-			<div class="links">
-				<a href="https://x.com/zaki_chahboun" target="_blank">X</a>
-				<span>•</span>
-				<a href="https://t.me/AyatDesignBot" target="_blank">Telegram</a>
-				<span>•</span>
-				<a href="https://github.com/zakaria-chahboun/ayat-design" target="_blank">Source Code</a>
+			<div class="footer-content">
+				<img src="static/logo_white.png" alt="آيات وأجر" class="footer-logo"/>
+				<div class="footer-info">
+					<p>
+						صُنع بـ ❤️ بواسطة 
+						<a href="https://github.com/zakaria-chahboun" target="_blank">زكرياء شهبون</a>
+					</p>
+					<div class="links">
+						<a href="https://x.com/zaki_chahboun" target="_blank">X</a>
+						<span>•</span>
+						<a href="https://t.me/AyatDesignBot" target="_blank">Telegram</a>
+						<span>•</span>
+						<a href="https://github.com/zakaria-chahboun/ayat-design" target="_blank">Source Code</a>
+					</div>
+				</div>
 			</div>
 		</footer>
 	</main>
