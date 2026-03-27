@@ -272,8 +272,8 @@ main {
 		gap: 4rem;
 	}
 
-	.logo h1 {
-		font-size: 3rem;
+	.hero h1 {
+		font-size: 2.5rem;
 	}
 
 	.tagline {
@@ -288,7 +288,5 @@ main {
 		grid-template-columns: 1fr;
 	}
 
-	.verse-text {
-		font-size: 1.4rem;
-	}
+
 }
