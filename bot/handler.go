@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
+	"github.com/zakaria-chahboun/AyatDesingBot/pb"
 	"github.com/zakaria-chahboun/AyatDesingBot/queue"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 	"github.com/zakaria-chahboun/AyatDesingBot/utils"
@@ -37,6 +38,19 @@ func userAttrs(c tele.Context) []any {
 		slog.String("user_name", u.FirstName+" "+u.LastName),
 		slog.String("username", u.Username),
 	}
+}
+
+func userInfo(c tele.Context) (int64, string, string) {
+	u := c.Sender()
+	fullName := u.FirstName
+	if u.LastName != "" {
+		fullName += " " + u.LastName
+	}
+	username := ""
+	if u.Username != "" {
+		username = "@" + u.Username
+	}
+	return u.ID, username, fullName
 }
 
 func verseCount(start, end int) int {
@@ -120,6 +134,14 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 	// /start ──────────────────────────────────────────────────────────────────
 	b.Handle("/start", func(c tele.Context) error {
 		slog.Info("User started bot", userAttrs(c)...)
+		userID, username, fullName := userInfo(c)
+		pb.RecordActivity(pb.ActivityData{
+			UserID:   userID,
+			Username: username,
+			FullName: fullName,
+			Action:   "start",
+			Status:   "success",
+		})
 		return c.Send(utils.EscapeMarkdownV2(GetStartMessage()), tele.ModeMarkdownV2)
 	})
 
@@ -238,6 +260,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			delete(pendingRequests, c.Chat().ID)
 			_ = c.Respond()
 
+			userID, username, fullName := userInfo(c)
 			if !queue.SubmitText(b, queue.TextJob{
 				ChatID:    c.Chat().ID,
 				MsgID:     waitMsg.ID,
@@ -246,6 +269,9 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 				StartAyah: req.StartAyah,
 				EndAyah:   req.EndAyah,
 				Verses:    verses,
+				UserID:    userID,
+				Username:  username,
+				FullName:  fullName,
 			}) {
 				_ = b.Delete(waitMsg)
 				return c.Send(GetQueueFullMessage())
@@ -300,6 +326,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 
 		delete(pendingRequests, c.Chat().ID)
 
+		userID, username, fullName := userInfo(c)
 		if !queue.SubmitImage(b, queue.ImageJob{
 			ChatID:    c.Chat().ID,
 			MsgID:     waitMsg.ID,
@@ -310,6 +337,9 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			Verses:    verses,
 			StyleID:   styleID,
 			FontPath:  fontPath,
+			UserID:    userID,
+			Username:  username,
+			FullName:  fullName,
 		}) {
 			_ = b.Delete(waitMsg)
 			_ = c.Respond()
@@ -365,6 +395,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 
 		delete(pendingRequests, c.Chat().ID)
 
+		userID, username, fullName := userInfo(c)
 		if !queue.SubmitVideo(b, queue.VideoJob{
 			ChatID:    c.Chat().ID,
 			MsgID:     waitMsg.ID,
@@ -376,7 +407,9 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			StyleID:   req.StyleID,
 			ReciterID: reciterID,
 			FontPath:  fontPath,
-			UserID:    c.Sender().ID,
+			UserID:    userID,
+			Username:  username,
+			FullName:  fullName,
 			Bypass:    req.Bypass,
 		}) {
 			_ = b.Delete(waitMsg)

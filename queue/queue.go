@@ -16,6 +16,9 @@ type TextJob struct {
 	StartAyah int
 	EndAyah   int
 	Verses    []quran.Verse
+	UserID    int64
+	Username  string
+	FullName  string
 }
 
 type ImageJob struct {
@@ -28,6 +31,9 @@ type ImageJob struct {
 	Verses    []quran.Verse
 	StyleID   string
 	FontPath  string
+	UserID    int64
+	Username  string
+	FullName  string
 }
 
 type VideoJob struct {
@@ -42,6 +48,8 @@ type VideoJob struct {
 	ReciterID string
 	FontPath  string
 	UserID    int64
+	Username  string
+	FullName  string
 	Bypass    bool
 }
 
@@ -65,6 +73,10 @@ type JobResult struct {
 	Text      string // text jobs only
 	FileBytes []byte // image/video jobs only
 	Err       error
+	UserID    int64
+	Username  string
+	FullName  string
+	StartTime int64 // Unix timestamp in milliseconds when job was submitted
 }
 
 // ─── Active-user guard ────────────────────────────────────────────────────────

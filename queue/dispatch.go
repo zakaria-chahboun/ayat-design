@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	tele "gopkg.in/telebot.v3"
 
+	"github.com/zakaria-chahboun/AyatDesingBot/pb"
 	"github.com/zakaria-chahboun/AyatDesingBot/utils"
 )
 
@@ -43,8 +45,7 @@ func SubmitText(b *tele.Bot, job TextJob) bool {
 		return false
 	}
 
-	// Wire: once the worker pushes to Results, the router below forwards to resultCh.
-	go routeResult(job.ChatID, resultCh)
+	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName)
 	return true
 }
 
@@ -62,7 +63,7 @@ func SubmitImage(b *tele.Bot, job ImageJob) bool {
 		return false
 	}
 
-	go routeResult(job.ChatID, resultCh)
+	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName)
 	return true
 }
 
@@ -80,7 +81,7 @@ func SubmitVideo(b *tele.Bot, job VideoJob) bool {
 		return false
 	}
 
-	go routeResult(job.ChatID, resultCh)
+	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName)
 	return true
 }
 
@@ -91,9 +92,14 @@ func SubmitVideo(b *tele.Bot, job VideoJob) bool {
 //
 // This is safe because only one job per user can be active at a time,
 // so at most one goroutine is waiting for any given chatID.
-func routeResult(chatID int64, dest chan<- JobResult) {
+func routeResult(chatID int64, dest chan<- JobResult, userID int64, username, fullname string) {
+	startTime := time.Now().UnixMilli()
 	for result := range Results {
 		if result.ChatID == chatID {
+			result.UserID = userID
+			result.Username = username
+			result.FullName = fullname
+			result.StartTime = startTime
 			dest <- result
 			return
 		}
@@ -111,6 +117,12 @@ func waitAndDeliver(b *tele.Bot, chatID int64, resultCh <-chan JobResult) {
 	if !ok {
 		// Channel closed — queue was full, nothing to deliver.
 		return
+	}
+
+	durationMs := time.Now().UnixMilli() - result.StartTime
+	ayahRange := fmt.Sprintf("%d", result.StartAyah)
+	if result.StartAyah != result.EndAyah {
+		ayahRange = fmt.Sprintf("%d-%d", result.StartAyah, result.EndAyah)
 	}
 
 	chat := &tele.Chat{ID: chatID}
@@ -131,6 +143,18 @@ func waitAndDeliver(b *tele.Bot, chatID int64, resultCh <-chan JobResult) {
 		if _, err := b.Send(chat, "⚠️ "+result.Err.Error()); err != nil {
 			slog.Error("Error msg send failed", slog.String("err", err.Error()))
 		}
+
+		pb.RecordActivity(pb.ActivityData{
+			UserID:       result.UserID,
+			Username:     result.Username,
+			FullName:     result.FullName,
+			Action:       string(result.Type),
+			Status:       "error",
+			ErrorMessage: result.Err.Error(),
+			SurahName:    result.SurahName,
+			AyahRange:    ayahRange,
+			DurationMs:   durationMs,
+		})
 		return
 	}
 
@@ -182,6 +206,17 @@ func waitAndDeliver(b *tele.Bot, chatID int64, resultCh <-chan JobResult) {
 			slog.Error("Video send failed", slog.String("err", err.Error()))
 		}
 	}
+
+	pb.RecordActivity(pb.ActivityData{
+		UserID:     result.UserID,
+		Username:   result.Username,
+		FullName:   result.FullName,
+		Action:     string(result.Type),
+		Status:     "success",
+		SurahName:  result.SurahName,
+		AyahRange:  ayahRange,
+		DurationMs: durationMs,
+	})
 
 	slog.Info("Job delivered",
 		slog.Int64("chat_id", chatID),

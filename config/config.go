@@ -51,6 +51,7 @@ type Config struct {
 
 var AppConfig Config
 var BotToken string
+var PocketBaseURL string
 
 func Load(path string) error {
 	data, err := os.ReadFile(path)
@@ -61,6 +62,7 @@ func Load(path string) error {
 		return err
 	}
 	BotToken = os.Getenv("BOT_TOKEN")
+	PocketBaseURL = os.Getenv("POCKETBASE_URL")
 
 	// Queue defaults
 	if AppConfig.Queue.TextWorkers <= 0 {

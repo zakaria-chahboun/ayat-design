@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/zakaria-chahboun/AyatDesingBot/bot"
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
+	"github.com/zakaria-chahboun/AyatDesingBot/pb"
 	"github.com/zakaria-chahboun/AyatDesingBot/queue"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 	"github.com/zakaria-chahboun/AyatDesingBot/video"
@@ -31,6 +32,10 @@ func main() {
 		cute.Check("Config Error", err)
 	}
 
+	if err := pb.Init(); err != nil {
+		logger.Warn("PocketBase init failed", "error", err)
+	}
+
 	list := cute.NewList(cute.BrightYellow, "🪏 Config")
 	list.Add(cute.DefaultColor, "Image Workers: "+strconv.Itoa(config.AppConfig.Queue.ImageWorkers))
 	list.Add(cute.DefaultColor, "Video Workers: "+strconv.Itoa(config.AppConfig.Queue.VideoWorkers))
@@ -41,6 +46,17 @@ func main() {
 
 	if bypass := os.Getenv("BYPASS_KEYWORD"); bypass != "" {
 		list.Add(cute.BrightGreen, "✓ Bypass Keyword: set")
+	}
+
+	if pb.IsEnabled() {
+		list.Add(cute.BrightGreen, "✓ Activity Tracking: enabled")
+		if pb.WaitReady(5 * time.Second) {
+			list.Add(cute.DefaultColor, "  PocketBase connected")
+		} else {
+			list.Add(cute.BrightYellow, "  PocketBase not ready (will retry)")
+		}
+	} else {
+		list.Add(cute.DefaultColor, "○ Activity Tracking: disabled")
 	}
 
 	if config.AppConfig.Cache.Audio {
