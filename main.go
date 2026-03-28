@@ -50,11 +50,6 @@ func main() {
 
 	if pb.IsEnabled() {
 		list.Add(cute.BrightGreen, "✓ Activity Tracking: enabled")
-		if pb.WaitReady(5 * time.Second) {
-			list.Add(cute.DefaultColor, "  PocketBase connected")
-		} else {
-			list.Add(cute.BrightYellow, "  PocketBase not ready (will retry)")
-		}
 	} else {
 		list.Add(cute.DefaultColor, "○ Activity Tracking: disabled")
 	}

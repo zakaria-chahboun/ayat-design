@@ -1,181 +1,107 @@
 package pb
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
-	"sync"
-	"time"
+	"reflect"
+	"strings"
 
 	"github.com/chrisbrocklesby/pbclient"
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
 )
 
-var (
-	client    *pbclient.Client
-	initOnce  sync.Once
-	authError error
-)
-
 func Init() error {
-	initOnce.Do(func() {
+	if config.PocketBaseURL == "" || config.PocketBaseEmail == "" || config.PocketBasePassword == "" {
+		var missing []string
 		if config.PocketBaseURL == "" {
-			slog.Warn("POCKETBASE_URL not set, activity tracking disabled")
-			return
+			missing = append(missing, "POCKETBASE_URL")
 		}
-
-		if config.PocketBaseEmail == "" || config.PocketBasePassword == "" {
-			slog.Warn("POCKETBASE_EMAIL or POCKETBASE_PASSWORD not set, activity tracking disabled")
-			return
+		if config.PocketBaseEmail == "" {
+			missing = append(missing, "POCKETBASE_EMAIL")
 		}
-
-		if config.PocketBaseCollection == "" {
-			slog.Warn("POCKETBASE_COLLECTION not set, activity tracking disabled")
-			return
+		if config.PocketBasePassword == "" {
+			missing = append(missing, "POCKETBASE_PASSWORD")
 		}
-
-		var err error
-		client, err = pbclient.NewClient(pbclient.Config{
-			BaseURL: config.PocketBaseURL,
-		})
-		if err != nil {
-			slog.Warn("Failed to initialize PocketBase client", "error", err)
-			authError = err
-			return
-		}
-		pbclient.SetDefault(client)
-
-		if err := authenticate(); err != nil {
-			slog.Warn("Failed to authenticate with PocketBase", "error", err)
-			authError = err
-			return
-		}
-
-		slog.Info("PocketBase client initialized")
-	})
-
-	return authError
-}
-
-func authenticate() error {
-	err := pbclient.LoginUser("users", config.PocketBaseEmail, config.PocketBasePassword)
-	if err != nil {
-		return fmt.Errorf("login failed: %w", err)
+		slog.Info("Activity tracking disabled", "missing", missing)
+		return nil
 	}
+
+	client, err := pbclient.NewClient(pbclient.Config{
+		BaseURL: config.PocketBaseURL,
+	})
+	if err != nil {
+		return err
+	}
+	pbclient.SetDefault(client)
+
+	if err := pbclient.LoginUser("users", config.PocketBaseEmail, config.PocketBasePassword); err != nil {
+		return err
+	}
+
+	checkFields()
+
+	slog.Info("PocketBase initialized")
 	return nil
 }
 
 func IsEnabled() bool {
-	return client != nil
+	return config.PocketBaseURL != "" && config.PocketBaseEmail != "" && config.PocketBasePassword != ""
 }
 
-func WaitReady(timeout time.Duration) bool {
-	if !IsEnabled() {
-		return false
-	}
-	time.Sleep(timeout)
-	return true
+type collectionSchema struct {
+	Schema []struct {
+		Name string `json:"name"`
+	} `json:"schema"`
 }
 
-func isUnauthorized(err error) bool {
-	if err == nil {
-		return false
+func checkFields() {
+	url := config.PocketBaseURL + "/api/collections/" + config.PocketBaseCollection
+
+	resp, err := http.Get(url)
+	if err != nil {
+		slog.Warn("Failed to get collection schema", "error", err)
+		return
 	}
-	errStr := err.Error()
-	return contains(errStr, "401") || contains(errStr, "unauthorized")
+	defer resp.Body.Close()
+
+	var schema collectionSchema
+	if err := json.NewDecoder(resp.Body).Decode(&schema); err != nil {
+		slog.Warn("Failed to parse collection schema", "error", err)
+		return
+	}
+
+	existingFields := make(map[string]bool)
+	for _, field := range schema.Schema {
+		existingFields[field.Name] = true
+	}
+
+	var missing []string
+	for _, field := range getActivityFields() {
+		if !existingFields[field] {
+			missing = append(missing, field)
+		}
+	}
+
+	if len(missing) > 0 {
+		slog.Warn("Missing fields in collection", "fields", missing)
+	} else {
+		slog.Info("All required fields exist in collection")
+	}
 }
 
-func contains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
+func getActivityFields() []string {
+	t := reflect.TypeOf(AyatActivity{})
+	var fields []string
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if jsonTag := field.Tag.Get("json"); jsonTag != "" && jsonTag != "-" {
+			if idx := strings.Index(jsonTag, ","); idx > 0 {
+				fields = append(fields, jsonTag[:idx])
+			} else {
+				fields = append(fields, jsonTag)
+			}
 		}
 	}
-	return false
-}
-
-func doRequestWithRetry(body map[string]any) error {
-	const maxRetries = 2
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		_, err := pbclient.Collection[map[string]any](config.PocketBaseCollection, client).Create(body)
-
-		if err != nil {
-			if isUnauthorized(err) && attempt < maxRetries {
-				slog.Warn("PocketBase unauthorized, re-authenticating...")
-				if authErr := pbclient.LoginUser("users", config.PocketBaseEmail, config.PocketBasePassword); authErr != nil {
-					slog.Warn("Re-authentication failed", "error", authErr)
-					continue
-				}
-				continue
-			}
-
-			if attempt >= maxRetries {
-				return fmt.Errorf("max retries exceeded: %w", err)
-			}
-			continue
-		}
-
-		return nil
-	}
-
-	return fmt.Errorf("max retries exceeded")
-}
-
-func doPBRequestWithRetry(method, path string, body interface{}) ([]byte, error) {
-	const maxRetries = 2
-	httpClient := &http.Client{Timeout: 30 * time.Second}
-
-	for attempt := 0; attempt <= maxRetries; attempt++ {
-		var req *http.Request
-		var err error
-
-		if body != nil {
-			jsonBody, _ := json.Marshal(body)
-			req, err = http.NewRequest(method, config.PocketBaseURL+path, bytes.NewBuffer(jsonBody))
-			if err == nil {
-				req.Header.Set("Content-Type", "application/json")
-			}
-		} else {
-			req, err = http.NewRequest(method, config.PocketBaseURL+path, nil)
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %w", err)
-		}
-
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			if attempt < maxRetries {
-				continue
-			}
-			return nil, fmt.Errorf("request failed: %w", err)
-		}
-		defer resp.Body.Close()
-
-		respBody, _ := io.ReadAll(resp.Body)
-
-		if resp.StatusCode == http.StatusUnauthorized {
-			slog.Warn("PocketBase unauthorized, re-authenticating...")
-			if authErr := pbclient.LoginUser("users", config.PocketBaseEmail, config.PocketBasePassword); authErr != nil {
-				slog.Warn("Re-authentication failed", "error", authErr)
-				continue
-			}
-			continue
-		}
-
-		if resp.StatusCode >= 400 {
-			if attempt < maxRetries {
-				continue
-			}
-			return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(respBody))
-		}
-
-		return respBody, nil
-	}
-
-	return nil, fmt.Errorf("max retries exceeded")
+	return fields
 }

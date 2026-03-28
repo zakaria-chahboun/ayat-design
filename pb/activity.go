@@ -2,6 +2,9 @@ package pb
 
 import (
 	"log/slog"
+
+	"github.com/chrisbrocklesby/pbclient"
+	"github.com/zakaria-chahboun/AyatDesingBot/config"
 )
 
 type ActivityData struct {
@@ -33,22 +36,23 @@ func RecordActivity(data ActivityData) {
 		return
 	}
 
-	body := map[string]any{
-		"user_id":     data.UserID,
-		"username":    data.Username,
-		"fullname":    data.FullName,
-		"action":      data.Action,
-		"status":      data.Status,
-		"surah_name":  data.SurahName,
-		"ayah_range":  data.AyahRange,
-		"duration_ms": data.DurationMs,
+	activity := AyatActivity{
+		UserID:     data.UserID,
+		Username:   data.Username,
+		FullName:   data.FullName,
+		Action:     data.Action,
+		Status:     data.Status,
+		SurahName:  data.SurahName,
+		AyahRange:  data.AyahRange,
+		DurationMs: data.DurationMs,
 	}
 
 	if data.ErrorMessage != "" {
-		body["error_message"] = data.ErrorMessage
+		activity.ErrorMessage = data.ErrorMessage
 	}
 
-	if err := doRequestWithRetry(body); err != nil {
+	_, err := pbclient.Collection[AyatActivity](config.PocketBaseCollection).Create(activity)
+	if err != nil {
 		slog.Warn("Failed to record activity", "error", err)
 	}
 }
