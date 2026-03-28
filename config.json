@@ -28,8 +28,7 @@
       "name": "أصفر",
       "background_image": "backgrounds/yellow.jpg",
       "blur_value": 8.0,
-      "text_color": "white",
-      "isNew": true
+      "text_color": "white"
     },
     {
       "id": "3",
@@ -43,14 +42,16 @@
       "name": "وردة",
       "background_image": "backgrounds/flower.jpg",
       "blur_value": 5.0,
-      "text_color": "white"
+      "text_color": "white",
+      "isNew": true
     },
     {
       "id": "6",
       "name": "أخضر",
       "background_image": "backgrounds/green.jpg",
       "blur_value": 3.0,
-      "text_color": "white"
+      "text_color": "white",
+      "isNew": true
     },
     {
       "id": "7",
@@ -73,20 +74,21 @@
       "name": "بحري",
       "background_image": "backgrounds/sea.jpg",
       "blur_value": 8.0,
-      "text_color": "white",
-      "isNew": true
+      "text_color": "white"
     }
   ],
   "reciters": [
     {
       "id": "alafasy",
       "name": "العفاسي",
-      "folder": "Alafasy_64kbps"
+      "folder": "Alafasy_64kbps",
+      "isNew": true
     },
     {
       "id": "maher",
       "name": "ماهر المعيقلي",
-      "folder": "Maher_AlMuaiqly_64kbps"
+      "folder": "Maher_AlMuaiqly_64kbps",
+      "isNew": true
     },
     {
       "id": "minshawy",
@@ -101,14 +103,12 @@
     {
       "id": "ghamadi",
       "name": "سعد الغامدي",
-      "folder": "Ghamadi_40kbps",
-      "isNew": true
+      "folder": "Ghamadi_40kbps"
     },
     {
       "id": "yassin_al_jazaery",
       "name": "ياسين الجزائري (ورش)",
-      "folder": "warsh/warsh_yassin_al_jazaery_64kbps",
-      "isNew": true
+      "folder": "warsh/warsh_yassin_al_jazaery_64kbps"
     }
   ]
 }
