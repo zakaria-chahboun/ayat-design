@@ -46,6 +46,7 @@ func Init() error {
 			authError = err
 			return
 		}
+		pbclient.SetDefault(client)
 
 		if err := authenticate(); err != nil {
 			slog.Warn("Failed to authenticate with PocketBase", "error", err)
