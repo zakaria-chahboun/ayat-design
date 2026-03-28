@@ -61,7 +61,7 @@ func Init() error {
 }
 
 func authenticate() error {
-	err := pbclient.LoginUser(config.PocketBaseCollection, config.PocketBaseEmail, config.PocketBasePassword)
+	err := pbclient.LoginUser("users", config.PocketBaseEmail, config.PocketBasePassword)
 	if err != nil {
 		return fmt.Errorf("login failed: %w", err)
 	}
@@ -101,12 +101,12 @@ func doRequestWithRetry(body map[string]any) error {
 	const maxRetries = 2
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		_, err := pbclient.Collection[map[string]any]("config.PocketBaseCollection", client).Create(body)
+		_, err := pbclient.Collection[map[string]any](config.PocketBaseCollection, client).Create(body)
 
 		if err != nil {
 			if isUnauthorized(err) && attempt < maxRetries {
 				slog.Warn("PocketBase unauthorized, re-authenticating...")
-				if authErr := pbclient.LoginUser("config.PocketBaseCollection", config.PocketBaseEmail, config.PocketBasePassword); authErr != nil {
+				if authErr := pbclient.LoginUser("users", config.PocketBaseEmail, config.PocketBasePassword); authErr != nil {
 					slog.Warn("Re-authentication failed", "error", authErr)
 					continue
 				}
@@ -160,7 +160,7 @@ func doPBRequestWithRetry(method, path string, body interface{}) ([]byte, error)
 
 		if resp.StatusCode == http.StatusUnauthorized {
 			slog.Warn("PocketBase unauthorized, re-authenticating...")
-			if authErr := pbclient.LoginUser("config.PocketBaseCollection", config.PocketBaseEmail, config.PocketBasePassword); authErr != nil {
+			if authErr := pbclient.LoginUser("users", config.PocketBaseEmail, config.PocketBasePassword); authErr != nil {
 				slog.Warn("Re-authentication failed", "error", authErr)
 				continue
 			}
