@@ -21,6 +21,10 @@ COPY --from=builder /app/backgrounds/* /app/backgrounds/
 COPY --from=builder /app/config.json /app/config.json
 COPY --from=builder /app/quran.json /app/quran.json
 
-EXPOSE 8080
+RUN mkdir -p /app/cache
+
+VOLUME ["/app/cache"]
+
+## EXPOSE 8080
 
 CMD ["/app/ayatbot"]
