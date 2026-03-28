@@ -52,6 +52,9 @@ type Config struct {
 var AppConfig Config
 var BotToken string
 var PocketBaseURL string
+var PocketBaseEmail string
+var PocketBasePassword string
+var PocketBaseCollection string
 
 func Load(path string) error {
 	data, err := os.ReadFile(path)
@@ -63,6 +66,12 @@ func Load(path string) error {
 	}
 	BotToken = os.Getenv("BOT_TOKEN")
 	PocketBaseURL = os.Getenv("POCKETBASE_URL")
+	PocketBaseEmail = os.Getenv("POCKETBASE_EMAIL")
+	PocketBasePassword = os.Getenv("POCKETBASE_PASSWORD")
+	PocketBaseCollection = os.Getenv("POCKETBASE_COLLECTION")
+	if PocketBaseCollection == "" {
+		PocketBaseCollection = "ayatbot_activites"
+	}
 
 	// Queue defaults
 	if AppConfig.Queue.TextWorkers <= 0 {

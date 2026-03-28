@@ -1,10 +1,10 @@
 package pb
 
 import (
+	"encoding/json"
 	"log/slog"
-	"os"
 
-	"github.com/chrisbrocklesby/pbclient"
+	"github.com/zakaria-chahboun/AyatDesingBot/config"
 )
 
 type FieldSchema struct {
@@ -19,92 +19,110 @@ type SelectOptions struct {
 	Values    []string `json:"values"`
 }
 
-type CollectionRequest struct {
-	Name       string        `json:"name"`
-	Type       string        `json:"type"`
-	Schema     []FieldSchema `json:"schema"`
-	Indexes    []string      `json:"indexes,omitempty"`
-	ListRule   string        `json:"listRule,omitempty"`
-	ViewRule   string        `json:"viewRule,omitempty"`
-	CreateRule string        `json:"createRule,omitempty"`
-	UpdateRule string        `json:"updateRule,omitempty"`
-	DeleteRule string        `json:"deleteRule,omitempty"`
+type CollectionResponse struct {
+	ID     string        `json:"id"`
+	Name   string        `json:"name"`
+	Schema []FieldSchema `json:"schema"`
+}
+
+type FieldPatchRequest struct {
+	Schema []FieldSchema `json:"schema"`
 }
 
 func RunMigrations() error {
-	url := os.Getenv("POCKETBASE_URL")
-	if url == "" {
-		slog.Info("POCKETBASE_URL not set, skipping migrations")
+	if !IsEnabled() {
+		slog.Info("PocketBase not enabled, skipping migrations")
 		return nil
 	}
 
-	c, err := pbclient.NewClient(pbclient.Config{
-		BaseURL: url,
-	})
+	resp, err := doPBRequestWithRetry("GET", "/api/collections/"+config.PocketBaseCollection, nil)
 	if err != nil {
+		slog.Warn("Failed to get collection info", "error", err)
 		return err
 	}
 
-	collection := CollectionRequest{
-		Name: "ayat_activities",
-		Type: "base",
-		Schema: []FieldSchema{
-			{
-				Name:     "user_id",
-				Type:     "number",
-				Required: true,
-			},
-			{
-				Name: "username",
-				Type: "text",
-			},
-			{
-				Name:     "fullname",
-				Type:     "text",
-				Required: true,
-			},
-			{
-				Name: "action",
-				Type: "select",
-				Options: SelectOptions{
-					MaxSelect: 1,
-					Values:    []string{"start", "text", "image", "video"},
-				},
-			},
-			{
-				Name: "status",
-				Type: "select",
-				Options: SelectOptions{
-					MaxSelect: 1,
-					Values:    []string{"success", "failed", "error"},
-				},
-			},
-			{
-				Name: "error_message",
-				Type: "text",
-			},
-			{
-				Name: "surah_name",
-				Type: "text",
-			},
-			{
-				Name: "ayah_range",
-				Type: "text",
-			},
-			{
-				Name: "duration_ms",
-				Type: "number",
+	var collection CollectionResponse
+	if err := json.Unmarshal(resp, &collection); err != nil {
+		slog.Warn("Failed to parse collection response", "error", err)
+		return err
+	}
+
+	existingFields := make(map[string]bool)
+	for _, field := range collection.Schema {
+		existingFields[field.Name] = true
+	}
+
+	fieldsToAdd := []FieldSchema{
+		{
+			Name:     "user_id",
+			Type:     "number",
+			Required: true,
+		},
+		{
+			Name: "username",
+			Type: "text",
+		},
+		{
+			Name:     "fullname",
+			Type:     "text",
+			Required: true,
+		},
+		{
+			Name: "action",
+			Type: "select",
+			Options: SelectOptions{
+				MaxSelect: 1,
+				Values:    []string{"start", "text", "image", "video"},
 			},
 		},
-		CreateRule: "",
+		{
+			Name: "status",
+			Type: "select",
+			Options: SelectOptions{
+				MaxSelect: 1,
+				Values:    []string{"success", "failed", "error"},
+			},
+		},
+		{
+			Name: "error_message",
+			Type: "text",
+		},
+		{
+			Name: "surah_name",
+			Type: "text",
+		},
+		{
+			Name: "ayah_range",
+			Type: "text",
+		},
+		{
+			Name: "duration_ms",
+			Type: "number",
+		},
 	}
 
-	_, err = pbclient.Collection[map[string]any]("collections", c).Create(collection)
+	var newFields []FieldSchema
+	for _, field := range fieldsToAdd {
+		if !existingFields[field.Name] {
+			newFields = append(newFields, field)
+			slog.Info("Adding field to collection", "field", field.Name)
+		}
+	}
+
+	if len(newFields) == 0 {
+		slog.Info("All fields already exist, no migration needed")
+		return nil
+	}
+
+	allFields := append(collection.Schema, newFields...)
+	patch := FieldPatchRequest{Schema: allFields}
+
+	_, err = doPBRequestWithRetry("PATCH", "/api/collections/"+config.PocketBaseCollection, patch)
 	if err != nil {
-		slog.Warn("Collection might already exist or migration failed", "error", err)
+		slog.Warn("Failed to update collection schema", "error", err)
 		return err
 	}
 
-	slog.Info("ayat_activities collection created successfully")
+	slog.Info("Migration completed successfully", "fields_added", len(newFields))
 	return nil
 }

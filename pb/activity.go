@@ -2,8 +2,6 @@ package pb
 
 import (
 	"log/slog"
-
-	"github.com/chrisbrocklesby/pbclient"
 )
 
 type ActivityData struct {
@@ -31,37 +29,26 @@ type AyatActivity struct {
 }
 
 func RecordActivity(data ActivityData) {
-	if client == nil {
+	if !IsEnabled() {
 		return
 	}
 
-	activity := AyatActivity{
-		UserID:     data.UserID,
-		Username:   data.Username,
-		FullName:   data.FullName,
-		Action:     data.Action,
-		Status:     data.Status,
-		SurahName:  data.SurahName,
-		AyahRange:  data.AyahRange,
-		DurationMs: data.DurationMs,
+	body := map[string]any{
+		"user_id":     data.UserID,
+		"username":    data.Username,
+		"fullname":    data.FullName,
+		"action":      data.Action,
+		"status":      data.Status,
+		"surah_name":  data.SurahName,
+		"ayah_range":  data.AyahRange,
+		"duration_ms": data.DurationMs,
 	}
 
 	if data.ErrorMessage != "" {
-		activity.ErrorMessage = data.ErrorMessage
+		body["error_message"] = data.ErrorMessage
 	}
 
-	_, err := pbclient.Collection[map[string]any]("ayat_activities", client).Create(map[string]any{
-		"user_id":       activity.UserID,
-		"username":      activity.Username,
-		"fullname":      activity.FullName,
-		"action":        activity.Action,
-		"status":        activity.Status,
-		"error_message": activity.ErrorMessage,
-		"surah_name":    activity.SurahName,
-		"ayah_range":    activity.AyahRange,
-		"duration_ms":   activity.DurationMs,
-	})
-	if err != nil {
+	if err := doRequestWithRetry(body); err != nil {
 		slog.Warn("Failed to record activity", "error", err)
 	}
 }
