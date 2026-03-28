@@ -10,6 +10,7 @@ import (
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/queue"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
+	"github.com/zakaria-chahboun/AyatDesingBot/utils"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -119,7 +120,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 	// /start ──────────────────────────────────────────────────────────────────
 	b.Handle("/start", func(c tele.Context) error {
 		slog.Info("User started bot", userAttrs(c)...)
-		return c.Send(GetStartMessage())
+		return c.Send(utils.EscapeMarkdownV2(GetStartMessage()), tele.ModeMarkdownV2)
 	})
 
 	// Free text: parse surah + ayah range + bypass keyword (optional) ───────────────────────────────
