@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	tele "gopkg.in/telebot.v3"
+
+	"github.com/zakaria-chahboun/AyatDesingBot/utils"
 )
 
 const telegramCharLimit = 4000
@@ -134,7 +136,7 @@ func waitAndDeliver(b *tele.Bot, chatID int64, resultCh <-chan JobResult) {
 
 	switch result.Type {
 	case JobTypeText:
-		escapedCaption := escapeMarkdownV2(caption)
+		escapedCaption := utils.EscapeMarkdownV2(caption)
 		textLen := len(escapedCaption) + 10 + len(result.Text)
 
 		if textLen <= telegramCharLimit {
@@ -194,31 +196,6 @@ func buildCaption(surahName string, startAyah, endAyah int) string {
 		return fmt.Sprintf("سورة %s، الآية (%d)", surahName, startAyah)
 	}
 	return fmt.Sprintf("سورة %s، الآيات (%d-%d)", surahName, startAyah, endAyah)
-}
-
-var mdV2Replacer = strings.NewReplacer(
-	"_", "\\_",
-	"*", "\\*",
-	"`", "\\`",
-	"[", "\\[",
-	"]", "\\]",
-	"(", "\\(",
-	")", "\\)",
-	"~", "\\~",
-	">", "\\>",
-	"#", "\\#",
-	"+", "\\+",
-	"-", "\\-",
-	"=", "\\=",
-	"|", "\\|",
-	"{", "\\{",
-	"}", "\\}",
-	".", "\\.",
-	"!", "\\!",
-)
-
-func escapeMarkdownV2(s string) string {
-	return mdV2Replacer.Replace(s)
 }
 
 func splitVersesByLimit(verses []string, limit int) []string {
