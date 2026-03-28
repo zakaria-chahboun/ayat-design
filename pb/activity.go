@@ -17,6 +17,9 @@ type ActivityData struct {
 	SurahName    string
 	AyahRange    string
 	DurationMs   int64
+	StyleName    string
+	ReciterName  string
+	IsHindiNum   bool
 }
 
 type AyatActivity struct {
@@ -29,6 +32,9 @@ type AyatActivity struct {
 	SurahName    string `json:"surah_name"`
 	AyahRange    string `json:"ayah_range"`
 	DurationMs   int64  `json:"duration_ms"`
+	StyleName    string `json:"style_name"`
+	ReciterName  string `json:"reciter_name"`
+	IsHindiNum   bool   `json:"is_hindi_num"`
 }
 
 func RecordActivity(data ActivityData) {
@@ -37,14 +43,17 @@ func RecordActivity(data ActivityData) {
 	}
 
 	activity := AyatActivity{
-		UserID:     data.UserID,
-		Username:   data.Username,
-		FullName:   data.FullName,
-		Action:     data.Action,
-		Status:     data.Status,
-		SurahName:  data.SurahName,
-		AyahRange:  data.AyahRange,
-		DurationMs: data.DurationMs,
+		UserID:      data.UserID,
+		Username:    data.Username,
+		FullName:    data.FullName,
+		Action:      data.Action,
+		Status:      data.Status,
+		SurahName:   data.SurahName,
+		AyahRange:   data.AyahRange,
+		DurationMs:  data.DurationMs,
+		StyleName:   data.StyleName,
+		ReciterName: data.ReciterName,
+		IsHindiNum:  data.IsHindiNum,
 	}
 
 	if data.ErrorMessage != "" {

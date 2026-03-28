@@ -9,6 +9,7 @@ import (
 
 	tele "gopkg.in/telebot.v3"
 
+	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/pb"
 	"github.com/zakaria-chahboun/AyatDesingBot/utils"
 )
@@ -45,7 +46,7 @@ func SubmitText(b *tele.Bot, job TextJob) bool {
 		return false
 	}
 
-	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName)
+	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName, "", "", job.IsHindiNum)
 	return true
 }
 
@@ -63,7 +64,8 @@ func SubmitImage(b *tele.Bot, job ImageJob) bool {
 		return false
 	}
 
-	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName)
+	styleName := config.GetStyleByID(job.StyleID).Name
+	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName, styleName, "", job.IsHindiNum)
 	return true
 }
 
@@ -81,7 +83,9 @@ func SubmitVideo(b *tele.Bot, job VideoJob) bool {
 		return false
 	}
 
-	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName)
+	styleName := config.GetStyleByID(job.StyleID).Name
+	reciterName := config.GetReciterByID(job.ReciterID).Name
+	go routeResult(job.ChatID, resultCh, job.UserID, job.Username, job.FullName, styleName, reciterName, job.IsHindiNum)
 	return true
 }
 
@@ -92,7 +96,7 @@ func SubmitVideo(b *tele.Bot, job VideoJob) bool {
 //
 // This is safe because only one job per user can be active at a time,
 // so at most one goroutine is waiting for any given chatID.
-func routeResult(chatID int64, dest chan<- JobResult, userID int64, username, fullname string) {
+func routeResult(chatID int64, dest chan<- JobResult, userID int64, username, fullname, styleName, reciterName string, isHindiNum bool) {
 	startTime := time.Now().UnixMilli()
 	for result := range Results {
 		if result.ChatID == chatID {
@@ -100,6 +104,9 @@ func routeResult(chatID int64, dest chan<- JobResult, userID int64, username, fu
 			result.Username = username
 			result.FullName = fullname
 			result.StartTime = startTime
+			result.StyleName = styleName
+			result.ReciterName = reciterName
+			result.IsHindiNum = isHindiNum
 			dest <- result
 			return
 		}
@@ -154,6 +161,9 @@ func waitAndDeliver(b *tele.Bot, chatID int64, resultCh <-chan JobResult) {
 			SurahName:    result.SurahName,
 			AyahRange:    ayahRange,
 			DurationMs:   durationMs,
+			StyleName:    result.StyleName,
+			ReciterName:  result.ReciterName,
+			IsHindiNum:   result.IsHindiNum,
 		})
 		return
 	}
@@ -208,14 +218,17 @@ func waitAndDeliver(b *tele.Bot, chatID int64, resultCh <-chan JobResult) {
 	}
 
 	pb.RecordActivity(pb.ActivityData{
-		UserID:     result.UserID,
-		Username:   result.Username,
-		FullName:   result.FullName,
-		Action:     string(result.Type),
-		Status:     "success",
-		SurahName:  result.SurahName,
-		AyahRange:  ayahRange,
-		DurationMs: durationMs,
+		UserID:      result.UserID,
+		Username:    result.Username,
+		FullName:    result.FullName,
+		Action:      string(result.Type),
+		Status:      "success",
+		SurahName:   result.SurahName,
+		AyahRange:   ayahRange,
+		DurationMs:  durationMs,
+		StyleName:   result.StyleName,
+		ReciterName: result.ReciterName,
+		IsHindiNum:  result.IsHindiNum,
 	})
 
 	slog.Info("Job delivered",

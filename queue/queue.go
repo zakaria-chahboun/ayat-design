@@ -9,48 +9,51 @@ import (
 // ─── Job types ────────────────────────────────────────────────────────────────
 
 type TextJob struct {
-	ChatID    int64
-	MsgID     int
-	SurahNum  int
-	SurahName string
-	StartAyah int
-	EndAyah   int
-	Verses    []quran.Verse
-	UserID    int64
-	Username  string
-	FullName  string
+	ChatID     int64
+	MsgID      int
+	SurahNum   int
+	SurahName  string
+	StartAyah  int
+	EndAyah    int
+	Verses     []quran.Verse
+	UserID     int64
+	Username   string
+	FullName   string
+	IsHindiNum bool
 }
 
 type ImageJob struct {
-	ChatID    int64
-	MsgID     int
-	SurahNum  int
-	SurahName string
-	StartAyah int
-	EndAyah   int
-	Verses    []quran.Verse
-	StyleID   string
-	FontPath  string
-	UserID    int64
-	Username  string
-	FullName  string
+	ChatID     int64
+	MsgID      int
+	SurahNum   int
+	SurahName  string
+	StartAyah  int
+	EndAyah    int
+	Verses     []quran.Verse
+	StyleID    string
+	FontPath   string
+	UserID     int64
+	Username   string
+	FullName   string
+	IsHindiNum bool
 }
 
 type VideoJob struct {
-	ChatID    int64
-	MsgID     int
-	SurahNum  int
-	SurahName string
-	StartAyah int
-	EndAyah   int
-	Verses    []quran.Verse
-	StyleID   string
-	ReciterID string
-	FontPath  string
-	UserID    int64
-	Username  string
-	FullName  string
-	Bypass    bool
+	ChatID     int64
+	MsgID      int
+	SurahNum   int
+	SurahName  string
+	StartAyah  int
+	EndAyah    int
+	Verses     []quran.Verse
+	StyleID    string
+	ReciterID  string
+	FontPath   string
+	UserID     int64
+	Username   string
+	FullName   string
+	Bypass     bool
+	IsHindiNum bool
 }
 
 // ─── Job result ───────────────────────────────────────────────────────────────
@@ -64,19 +67,22 @@ const (
 )
 
 type JobResult struct {
-	ChatID    int64
-	MsgID     int
-	SurahName string
-	StartAyah int
-	EndAyah   int
-	Type      JobType
-	Text      string // text jobs only
-	FileBytes []byte // image/video jobs only
-	Err       error
-	UserID    int64
-	Username  string
-	FullName  string
-	StartTime int64 // Unix timestamp in milliseconds when job was submitted
+	ChatID      int64
+	MsgID       int
+	SurahName   string
+	StartAyah   int
+	EndAyah     int
+	Type        JobType
+	Text        string // text jobs only
+	FileBytes   []byte // image/video jobs only
+	Err         error
+	UserID      int64
+	Username    string
+	FullName    string
+	StartTime   int64 // Unix timestamp in milliseconds when job was submitted
+	StyleName   string
+	ReciterName string
+	IsHindiNum  bool
 }
 
 // ─── Active-user guard ────────────────────────────────────────────────────────

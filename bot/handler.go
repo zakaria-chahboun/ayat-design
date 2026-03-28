@@ -22,8 +22,10 @@ type RequestData struct {
 	StartAyah    int
 	EndAyah      int
 	StyleID      string
+	ReciterID    string
 	SelectionMsg string
 	Bypass       bool
+	IsHindiNum   bool
 }
 
 // pendingRequests maps chat ID → active request awaiting further input.
@@ -55,22 +57,6 @@ func userInfo(c tele.Context) (int64, string, string) {
 
 func verseCount(start, end int) int {
 	return end - start + 1
-}
-
-func normalizeNumerals(s string) string {
-	arabicToEnglish := map[rune]rune{
-		'٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
-		'٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
-	}
-	var result strings.Builder
-	for _, r := range s {
-		if val, ok := arabicToEnglish[r]; ok {
-			result.WriteRune(val)
-		} else {
-			result.WriteRune(r)
-		}
-	}
-	return result.String()
 }
 
 func buildOutputMenu() *tele.ReplyMarkup {
@@ -157,7 +143,8 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		}
 
 		surahNameInput := matches[1]
-		ayahPart := normalizeNumerals(matches[2])
+		isHindiNum := utils.ContainsArabicNumerals(matches[2])
+		ayahPart := utils.NormalizeNumerals(matches[2])
 		bypassKeyword := matches[3]
 
 		surahNum, err := quran.GetSurahByName(surahNameInput)
@@ -209,6 +196,7 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 			EndAyah:      endAyah,
 			SelectionMsg: selectionMsg,
 			Bypass:       isBypass,
+			IsHindiNum:   isHindiNum,
 		}
 
 		slog.Info("User requested verses",
@@ -262,16 +250,17 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 
 			userID, username, fullName := userInfo(c)
 			if !queue.SubmitText(b, queue.TextJob{
-				ChatID:    c.Chat().ID,
-				MsgID:     waitMsg.ID,
-				SurahNum:  req.SurahNum,
-				SurahName: req.SurahName,
-				StartAyah: req.StartAyah,
-				EndAyah:   req.EndAyah,
-				Verses:    verses,
-				UserID:    userID,
-				Username:  username,
-				FullName:  fullName,
+				ChatID:     c.Chat().ID,
+				MsgID:      waitMsg.ID,
+				SurahNum:   req.SurahNum,
+				SurahName:  req.SurahName,
+				StartAyah:  req.StartAyah,
+				EndAyah:    req.EndAyah,
+				Verses:     verses,
+				UserID:     userID,
+				Username:   username,
+				FullName:   fullName,
+				IsHindiNum: req.IsHindiNum,
 			}) {
 				_ = b.Delete(waitMsg)
 				return c.Send(GetQueueFullMessage())
@@ -328,18 +317,19 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 
 		userID, username, fullName := userInfo(c)
 		if !queue.SubmitImage(b, queue.ImageJob{
-			ChatID:    c.Chat().ID,
-			MsgID:     waitMsg.ID,
-			SurahNum:  req.SurahNum,
-			SurahName: req.SurahName,
-			StartAyah: req.StartAyah,
-			EndAyah:   req.EndAyah,
-			Verses:    verses,
-			StyleID:   styleID,
-			FontPath:  fontPath,
-			UserID:    userID,
-			Username:  username,
-			FullName:  fullName,
+			ChatID:     c.Chat().ID,
+			MsgID:      waitMsg.ID,
+			SurahNum:   req.SurahNum,
+			SurahName:  req.SurahName,
+			StartAyah:  req.StartAyah,
+			EndAyah:    req.EndAyah,
+			Verses:     verses,
+			StyleID:    styleID,
+			FontPath:   fontPath,
+			UserID:     userID,
+			Username:   username,
+			FullName:   fullName,
+			IsHindiNum: req.IsHindiNum,
 		}) {
 			_ = b.Delete(waitMsg)
 			_ = c.Respond()
@@ -397,20 +387,21 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 
 		userID, username, fullName := userInfo(c)
 		if !queue.SubmitVideo(b, queue.VideoJob{
-			ChatID:    c.Chat().ID,
-			MsgID:     waitMsg.ID,
-			SurahNum:  req.SurahNum,
-			SurahName: req.SurahName,
-			StartAyah: req.StartAyah,
-			EndAyah:   req.EndAyah,
-			Verses:    verses,
-			StyleID:   req.StyleID,
-			ReciterID: reciterID,
-			FontPath:  fontPath,
-			UserID:    userID,
-			Username:  username,
-			FullName:  fullName,
-			Bypass:    req.Bypass,
+			ChatID:     c.Chat().ID,
+			MsgID:      waitMsg.ID,
+			SurahNum:   req.SurahNum,
+			SurahName:  req.SurahName,
+			StartAyah:  req.StartAyah,
+			EndAyah:    req.EndAyah,
+			Verses:     verses,
+			StyleID:    req.StyleID,
+			ReciterID:  reciterID,
+			FontPath:   fontPath,
+			UserID:     userID,
+			Username:   username,
+			FullName:   fullName,
+			Bypass:     req.Bypass,
+			IsHindiNum: req.IsHindiNum,
 		}) {
 			_ = b.Delete(waitMsg)
 			_ = c.Respond()
