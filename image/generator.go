@@ -12,7 +12,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/disintegration/imaging"
 	"github.com/zakaria-chahboun/AyatDesingBot/config"
 	"github.com/zakaria-chahboun/AyatDesingBot/quran"
 
@@ -177,10 +176,6 @@ func GenerateImage(surahNum int, surahName string, startAyah, endAyah int, verse
 	bgImg, _, err := image.Decode(bgFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode background image: %w", err)
-	}
-
-	if style.BlurValue > 0 {
-		bgImg = imaging.Blur(bgImg, style.BlurValue)
 	}
 
 	bgW := float64(bgImg.Bounds().Dx())

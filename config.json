@@ -20,61 +20,41 @@
       "id": "1",
       "name": "داكن",
       "background_image": "backgrounds/black.jpg",
-      "blur_value": 0,
-      "text_color": "white"
-    },
-    {
-      "id": "2",
-      "name": "أصفر",
-      "background_image": "backgrounds/yellow.jpg",
-      "blur_value": 8.0,
       "text_color": "white"
     },
     {
       "id": "3",
       "name": "ورقي",
       "background_image": "backgrounds/paper.jpg",
-      "blur_value": 0.0,
       "text_color": "black"
     },
     {
       "id": "5",
       "name": "وردة",
       "background_image": "backgrounds/flower.jpg",
-      "blur_value": 5.0,
       "text_color": "white",
       "isNew": true
     },
     {
       "id": "6",
-      "name": "أخضر",
+      "name": "عشبي",
       "background_image": "backgrounds/green.jpg",
-      "blur_value": 3.0,
       "text_color": "white",
       "isNew": true
     },
     {
       "id": "7",
-      "name": "بني",
+      "name": "خريفي",
       "background_image": "backgrounds/brown.jpg",
-      "blur_value": 6.0,
       "text_color": "white",
-      "isNew": true
+      "isNew": false
     },
     {
       "id": "8",
       "name": "زهري",
       "background_image": "backgrounds/pink.jpg",
-      "blur_value": 3.0,
       "text_color": "black",
-      "isNew": true
-    },
-    {
-      "id": "9",
-      "name": "بحري",
-      "background_image": "backgrounds/sea.jpg",
-      "blur_value": 8.0,
-      "text_color": "white"
+      "isNew": false
     }
   ],
   "reciters": [

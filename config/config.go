@@ -6,12 +6,11 @@ import (
 )
 
 type Style struct {
-	ID              string  `json:"id"`
-	Name            string  `json:"name"`
-	BackgroundImage string  `json:"background_image"`
-	BlurValue       float64 `json:"blur_value"`
-	TextColor       string  `json:"text_color"`
-	IsNew           bool    `json:"isNew"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	BackgroundImage string `json:"background_image"`
+	TextColor       string `json:"text_color"`
+	IsNew           bool   `json:"isNew"`
 }
 
 type Reciter struct {
