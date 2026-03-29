@@ -20,10 +20,9 @@ import (
 const (
 	everyAyahBaseURL  = "https://everyayah.com/data/"
 	fetchTimeout      = 15 * time.Second
-	silencePadding    = 0.0
-	fadeInDuration    = 0.6
-	crossfadeDuration = 0.4
-	fadeOutDuration   = 0.8
+	leadPadding       = 0.5 // image shown before audio starts (seconds)
+	trailPadding      = 0.5 // image shown after audio ends (seconds)
+	crossfadeDuration = 0.3
 )
 
 func GenerateVideo(
@@ -187,9 +186,22 @@ func getAudioDuration(audioPath string) (float64, error) {
 func buildAndRunFFmpeg(tempDir string, numVerses int, durations []float64, outputPath string) error {
 	var args []string
 
+	// Calculate per-frame display durations:
+	// first frame gets +leadPadding, last frame gets +trailPadding
+	frameDurations := make([]float64, numVerses)
+	for i := 0; i < numVerses; i++ {
+		frameDurations[i] = durations[i]
+		if i == 0 {
+			frameDurations[i] += leadPadding
+		}
+		if i == numVerses-1 {
+			frameDurations[i] += trailPadding
+		}
+	}
+
 	for i := 0; i < numVerses; i++ {
 		framePath := filepath.Join(tempDir, fmt.Sprintf("frame_%03d.png", i))
-		args = append(args, "-loop", "1", "-t", fmt.Sprintf("%.3f", durations[i]+silencePadding), "-i", framePath)
+		args = append(args, "-loop", "1", "-t", fmt.Sprintf("%.3f", frameDurations[i]), "-i", framePath)
 	}
 
 	for i := 0; i < numVerses; i++ {
@@ -198,12 +210,14 @@ func buildAndRunFFmpeg(tempDir string, numVerses int, durations []float64, outpu
 	}
 
 	totalDur := 0.0
-	for _, d := range durations {
-		totalDur += d + silencePadding
+	for _, d := range frameDurations {
+		totalDur += d
 	}
-	totalDur -= silencePadding
+	if numVerses > 1 {
+		totalDur -= float64(numVerses-1) * crossfadeDuration
+	}
 
-	filterComplex, audioConcat := buildFilterGraph(numVerses, durations, totalDur)
+	filterComplex, audioConcat := buildFilterGraph(numVerses, durations, frameDurations, totalDur)
 	args = append(args, "-filter_complex", filterComplex)
 	args = append(args, "-map", "[vout]", "-map", fmt.Sprintf("[%s]", audioConcat))
 	args = append(args, "-c:v", "libx264", "-preset", "veryfast", "-crf", "27", "-tune", "stillimage")
@@ -221,40 +235,69 @@ func buildAndRunFFmpeg(tempDir string, numVerses int, durations []float64, outpu
 	return nil
 }
 
-func buildFilterGraph(numVerses int, durations []float64, totalDur float64) (string, string) {
+func buildFilterGraph(numVerses int, durations []float64, frameDurations []float64, totalDur float64) (string, string) {
+	scaleFilter := "scale=720:-2:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2"
+
 	if numVerses == 1 {
-		fadeOutStart := totalDur - fadeOutDuration
+		// Single frame: no crossfade needed, just scale.
+		// Audio: prepend leadPadding silence via adelay, append trailPadding via apad.
 		filter := fmt.Sprintf(
-			"[0:v]fade=t=in:st=0:d=%.1f,fade=t=out:st=%.3f:d=%.1f,scale=720:-2:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2[vout];[1:a]anull[aout]",
-			fadeInDuration, fadeOutStart, fadeOutDuration)
+			"[0:v]%s[vout];"+
+				"[1:a]adelay=%.0f:all=1[adelayed];"+
+				"[adelayed]apad=pad_dur=%.3f[aout]",
+			scaleFilter,
+			leadPadding*1000,
+			trailPadding,
+		)
 		return filter, "aout"
 	}
 
+	// --- Video: xfade crossfades between frames ---
 	var videoParts []string
 	prevOutput := "[0:v]"
 
-	videoParts = append(videoParts, fmt.Sprintf("[0:v]fade=t=in:st=0:d=%.1f[v0fade]", fadeInDuration))
-	prevOutput = "[v0fade]"
-
-	offset := durations[0] + silencePadding - crossfadeDuration
+	offset := frameDurations[0] - crossfadeDuration
 	for i := 1; i < numVerses; i++ {
-		videoParts = append(videoParts, fmt.Sprintf("%s[%d:v]xfade=transition=fade:duration=%.1f:offset=%.3f[vout]", prevOutput, i, crossfadeDuration, offset))
-		offset += durations[i] + silencePadding - crossfadeDuration
-		prevOutput = "[vout]"
+		var outLabel string
+		if i == numVerses-1 {
+			outLabel = "prescale"
+		} else {
+			outLabel = fmt.Sprintf("xf%d", i)
+		}
+		videoParts = append(videoParts, fmt.Sprintf(
+			"%s[%d:v]xfade=transition=fade:duration=%.1f:offset=%.3f[%s]",
+			prevOutput, i, crossfadeDuration, offset, outLabel,
+		))
+		offset += frameDurations[i] - crossfadeDuration
+		prevOutput = fmt.Sprintf("[%s]", outLabel)
 	}
+	videoParts = append(videoParts, fmt.Sprintf("[prescale]%s[vout]", scaleFilter))
 
-	fadeOutStart := totalDur - fadeOutDuration
-	videoParts = append(videoParts, fmt.Sprintf("[vout]fade=t=out:st=%.3f:d=%.1f,scale=720:-2:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2[vout]", fadeOutStart, fadeOutDuration))
-
-	var audioInputs []string
+	// --- Audio: silence pads + concat ---
+	// First audio: prepend leadPadding silence via adelay.
+	// Last audio: append trailPadding silence via apad.
+	// Middle: pass through unchanged.
+	var audioParts []string
+	var audioLabels []string
 	for i := 0; i < numVerses; i++ {
-		audioInputs = append(audioInputs, fmt.Sprintf("[%d:a]", numVerses+i))
+		inputIdx := numVerses + i
+		inLabel := fmt.Sprintf("[%d:a]", inputIdx)
+		outLabel := fmt.Sprintf("a%d", i)
+
+		switch {
+		case i == 0:
+			audioParts = append(audioParts, fmt.Sprintf("%sadelay=%.0f:all=1[%s]", inLabel, leadPadding*1000, outLabel))
+		case i == numVerses-1:
+			audioParts = append(audioParts, fmt.Sprintf("%sapad=pad_dur=%.3f[%s]", inLabel, trailPadding, outLabel))
+		default:
+			audioParts = append(audioParts, fmt.Sprintf("%sanull[%s]", inLabel, outLabel))
+		}
+		audioLabels = append(audioLabels, fmt.Sprintf("[%s]", outLabel))
 	}
 	audioConcat := "aout"
-	audioChain := fmt.Sprintf("%sconcat=n=%d:v=0:a=1[%s]", strings.Join(audioInputs, ""), numVerses, audioConcat)
+	audioChain := fmt.Sprintf("%sconcat=n=%d:v=0:a=1[%s]", strings.Join(audioLabels, ""), numVerses, audioConcat)
 
-	filterComplex := strings.Join(videoParts, ";") + ";" + audioChain
-
+	filterComplex := strings.Join(videoParts, ";") + ";" + strings.Join(audioParts, ";") + ";" + audioChain
 	return filterComplex, audioConcat
 }
 
