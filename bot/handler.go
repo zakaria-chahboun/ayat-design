@@ -135,7 +135,44 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		if c.Sender().Username != config.TelegramAdminUsername {
 			return nil
 		}
-		return SendNotification(b, c)
+		return ShowPendingNotificationsList(b, c)
+	})
+
+	b.Handle("\fnotify_send", func(c tele.Context) error {
+		if c.Sender().Username != config.TelegramAdminUsername {
+			return nil
+		}
+		notificationID := c.Callback().Data
+		if notificationID == "" {
+			return c.Respond(&tele.CallbackResponse{Text: "❌ Invalid selection"})
+		}
+
+		userIDs, _ := pb.GetDistinctUserIDs()
+		userCount := len(userIDs)
+
+		firstUserFullName := "user"
+		if userCount > 0 {
+			if name, err := pb.GetUserFullName(userIDs[0]); err == nil && name != "" {
+				firstUserFullName = name
+			}
+		}
+
+		_ = b.Delete(c.Message())
+
+		loadingMsg, _ := b.Send(c.Chat(), fmt.Sprintf("📤 Sending to %s (1/%d)...", firstUserFullName, userCount))
+
+		_, sendErr := SendSpecificNotification(b, c, notificationID, loadingMsg)
+		if sendErr != nil {
+			if loadingMsg != nil {
+				_, _ = b.Edit(loadingMsg, "❌ Error sending notification")
+			}
+			return c.Respond(&tele.CallbackResponse{Text: "❌ Failed"})
+		}
+
+		if loadingMsg != nil {
+			_, _ = b.Edit(loadingMsg, fmt.Sprintf("✅ Sent to %d users", userCount))
+		}
+		return c.Respond(&tele.CallbackResponse{Text: "✅ Done!"})
 	})
 
 	// Free text: parse surah + ayah range + bypass keyword (optional) ───────────────────────────────
