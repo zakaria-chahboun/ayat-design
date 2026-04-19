@@ -53,7 +53,9 @@ var BotToken string
 var PocketBaseURL string
 var PocketBaseEmail string
 var PocketBasePassword string
-var PocketBaseCollection string
+var PocketBaseCollectionActivities string
+var PocketBaseCollectionNotifications string
+var TelegramAdminUsername string
 
 func Load(path string) error {
 	data, err := os.ReadFile(path)
@@ -67,9 +69,14 @@ func Load(path string) error {
 	PocketBaseURL = os.Getenv("POCKETBASE_URL")
 	PocketBaseEmail = os.Getenv("POCKETBASE_EMAIL")
 	PocketBasePassword = os.Getenv("POCKETBASE_PASSWORD")
-	PocketBaseCollection = os.Getenv("POCKETBASE_COLLECTION")
-	if PocketBaseCollection == "" {
-		PocketBaseCollection = "ayatbot_activites"
+	PocketBaseCollectionActivities = os.Getenv("POCKETBASE_COLLECTION_ACTIVITIES")
+	PocketBaseCollectionNotifications = os.Getenv("POCKETBASE_COLLECTION_NOTIFICATIONS")
+	TelegramAdminUsername = os.Getenv("TELEGRAM_ADMIN_USERNAME")
+	if PocketBaseCollectionActivities == "" {
+		PocketBaseCollectionActivities = "ayatbot_activites"
+	}
+	if PocketBaseCollectionNotifications == "" {
+		PocketBaseCollectionNotifications = "ayatbot_notifications"
 	}
 
 	// Queue defaults

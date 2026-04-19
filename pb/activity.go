@@ -60,7 +60,7 @@ func RecordActivity(data ActivityData) {
 		activity.ErrorMessage = data.ErrorMessage
 	}
 
-	_, err := pbclient.Collection[AyatActivity](config.PocketBaseCollection).Create(activity)
+	_, err := pbclient.Collection[AyatActivity](config.PocketBaseCollectionActivities).Create(activity)
 	if err != nil {
 		slog.Warn("Failed to record activity", "error", err)
 	}

@@ -56,7 +56,7 @@ type collectionSchema struct {
 }
 
 func checkFields() {
-	url := config.PocketBaseURL + "/api/collections/" + config.PocketBaseCollection
+	url := config.PocketBaseURL + "/api/collections/" + config.PocketBaseCollectionActivities
 
 	resp, err := http.Get(url)
 	if err != nil {

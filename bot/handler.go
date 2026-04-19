@@ -131,6 +131,13 @@ func RegisterHandlers(b *tele.Bot, fontPath string) {
 		return c.Send(utils.EscapeMarkdownV2(GetStartMessage()), tele.ModeMarkdownV2)
 	})
 
+	b.Handle("/notify", func(c tele.Context) error {
+		if c.Sender().Username != config.TelegramAdminUsername {
+			return nil
+		}
+		return SendNotification(b, c)
+	})
+
 	// Free text: parse surah + ayah range + bypass keyword (optional) ───────────────────────────────
 	inputRegex := regexp.MustCompile(`^(.+?)\s+([\d٠-٩]+(?:-[\d٠-٩]+)?)(?:\s+(\S+))?$`)
 
