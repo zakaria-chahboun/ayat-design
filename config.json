@@ -61,13 +61,18 @@
     {
       "id": "alafasy",
       "name": "العفاسي",
-      "folder": "Alafasy_64kbps",
-      "isNew": true
+      "folder": "Alafasy_64kbps"
     },
     {
       "id": "maher",
       "name": "ماهر المعيقلي",
-      "folder": "Maher_AlMuaiqly_64kbps",
+      "folder": "Maher_AlMuaiqly_64kbps"
+    },
+    
+    {
+      "id": "qatami",
+      "name": "ناصر القطامي",
+      "folder": "Nasser_Alqatami_128kbps",
       "isNew": true
     },
     {
