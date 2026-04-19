@@ -91,3 +91,42 @@ func GetUserFullName(userID int64) (string, error) {
 
 	return result.Items[0].FullName, nil
 }
+
+func GetAllPendingNotifications(limit int) ([]AyatNotification, error) {
+	if !IsEnabled() {
+		return nil, nil
+	}
+
+	result, err := pbclient.Collection[AyatNotification](config.PocketBaseCollectionNotifications).
+		List(fmt.Sprintf("filter=(done=false)&perPage=%d&sort=created", limit))
+	if err != nil {
+		return nil, err
+	}
+
+	var notifications []AyatNotification
+	for _, notif := range result.Items {
+		if notif.MarkdownMessage != "" {
+			notifications = append(notifications, notif)
+		}
+	}
+
+	return notifications, nil
+}
+
+func GetNotificationByID(id string) (*AyatNotification, error) {
+	if !IsEnabled() {
+		return nil, nil
+	}
+
+	result, err := pbclient.Collection[AyatNotification](config.PocketBaseCollectionNotifications).
+		List(fmt.Sprintf("filter=(id='%s')&perPage=1", id))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result.Items) == 0 {
+		return nil, nil
+	}
+
+	return &result.Items[0], nil
+}
