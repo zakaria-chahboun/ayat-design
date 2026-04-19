@@ -61,12 +61,14 @@
     {
       "id": "alafasy",
       "name": "العفاسي",
-      "folder": "Alafasy_64kbps"
+      "folder": "Alafasy_64kbps",
+      "isNew": true
     },
     {
       "id": "maher",
       "name": "ماهر المعيقلي",
-      "folder": "Maher_AlMuaiqly_64kbps"
+      "folder": "Maher_AlMuaiqly_64kbps",
+      "isNew": true
     },
     
     {
